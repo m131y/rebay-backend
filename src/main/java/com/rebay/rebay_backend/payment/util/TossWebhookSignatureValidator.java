@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Mac;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
@@ -17,7 +16,7 @@ import java.util.Base64;
 
 @Component
 @Slf4j
-public class TossWebhookSignature {
+public class TossWebhookSignatureValidator {
     private static final String HMAC_SHA256 = "HmacSHA256";
 
     // 토스페이먼츠 웹훅 서명 검증
