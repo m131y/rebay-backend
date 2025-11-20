@@ -18,13 +18,12 @@ public class CategoryInitializer {
         return args -> {
             // 이미 데이터가 존재하는지 확인하여 중복 삽입 방지
             if (categoryRepository.count() > 0) {
-                System.out.println("✅ 카테고리 데이터가 이미 존재합니다. 초기화 건너뛰기.");
+                System.out.println("category already exist.. ");
                 return;
             }
 
-            System.out.println("🚀 카테고리 초기 데이터 삽입 시작...");
+            System.out.println("category initializing...");
 
-            // 모든 카테고리를 저장할 리스트
             List<Category> allCategories = new ArrayList<>();
 
             // 1. 최상위 카테고리 (Level 1) 생성 및 저장
@@ -91,13 +90,10 @@ public class CategoryInitializer {
             // 830: 잡화 하위
             saveCategory(categoryRepository, 831, "명품 가방", accessories, allCategories);
 
-            System.out.println("✅ 카테고리 초기 데이터 삽입 완료. 총 " + allCategories.size() + "개 저장됨.");
+            System.out.println("initializing end " + allCategories.size() + "개 저장됨.");
         };
     }
 
-    /**
-     * 카테고리 객체를 생성하고 저장한 뒤 리스트에 추가하는 헬퍼 메서드
-     */
     @Transactional
     private Category saveCategory(CategoryRepository repository, int code, String name, Category parent, List<Category> list) {
         Category category = Category.builder()

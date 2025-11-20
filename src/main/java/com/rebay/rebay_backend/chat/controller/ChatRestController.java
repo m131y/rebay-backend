@@ -7,12 +7,19 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
+import com.rebay.rebay_backend.chat.service.ChatService;
+import com.rebay.rebay_backend.user.entity.User;
+import com.rebay.rebay_backend.user.service.AuthenticationService;
+
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
 public class ChatRestController {
 
     private final ChatMessageRepository repo;
+
+    private final ChatService chatService;
+    private final AuthenticationService authenticationService;
 
     @GetMapping("/rooms/{roomId}/messages")
     public Page<RoomMessageEvent> getMessagesByRoomId(@PathVariable Long roomId,
@@ -28,4 +35,12 @@ public class ChatRestController {
                         m.getCreatedAt()
                 ));
     }
+
+    // 채팅방 생성/입장
+    @PostMapping("/rooms")
+    public Long createOrGetRoom(@RequestParam Long targetUserId) {
+        User currentUser = authenticationService.getCurrentUser();
+        return chatService.getOrCreateChatRoom(currentUser.getId(), targetUserId);
+    }
+
 }

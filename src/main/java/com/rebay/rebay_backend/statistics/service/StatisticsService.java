@@ -53,20 +53,20 @@ public class StatisticsService {
     private final UserService userService;
     private final AuthenticationService authenticationService;
 
-    @CachePut(value = "weeklyTopPosts", key = "'latest'")
+
     public List<PostResponse> getTopLikedProductsLastWeek() {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);
         List<Post> posts = likeRepository.findTopLikedPostsLastWeek(oneWeekAgo);
         return posts.stream().map(post -> PostResponse.from(post, UserResponse.builder().build())).toList();
     }
 
-    @CachePut(value = "dailyTopKeywords", key = "'latest'")
+
     public Set<String> getDailyTop10Keywords() {
         LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
         return searchRepository.findTop10PopularKeywordsInOneDay(oneDayAgo);
     }
 
-    @CachePut(value = "userAvgEarnings", key = "'latest'")
+
     public BigDecimal getAverageEarningsPerUser() {
         List<Object[]> results = paymentRepository.findTotalSalesAndUniqueUserCount();
 
@@ -78,6 +78,8 @@ public class StatisticsService {
 
         BigDecimal totalSales;
         Object sumResult = result[0];
+        log.info("sumResult: ",sumResult);
+
         if (sumResult == null) {
             totalSales = BigDecimal.ZERO;
         } else if (sumResult instanceof BigDecimal) {
@@ -91,6 +93,7 @@ public class StatisticsService {
         if (totalSales.compareTo(BigDecimal.ZERO) == 0 || uniqueUserCount == null || uniqueUserCount == 0) {
             return BigDecimal.ZERO;
         }
+        log.info("uniqueUserCount: ",uniqueUserCount);
 
         BigDecimal divisor = BigDecimal.valueOf(uniqueUserCount);
 
