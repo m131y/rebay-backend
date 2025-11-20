@@ -1,9 +1,6 @@
 package com.rebay.rebay_backend.user.controller;
 
-import com.rebay.rebay_backend.user.dto.PasswordUpdateRequest;
-import com.rebay.rebay_backend.user.dto.UserDto;
-import com.rebay.rebay_backend.user.dto.UserResponse;
-import com.rebay.rebay_backend.user.dto.UserUpdateRequest;
+import com.rebay.rebay_backend.user.dto.*;
 import com.rebay.rebay_backend.user.entity.User;
 import com.rebay.rebay_backend.user.service.AuthenticationService;
 import com.rebay.rebay_backend.user.service.UserService;
@@ -41,5 +38,15 @@ public class UserController {
     @PutMapping("/me/password")
     public ResponseEntity<Boolean> updatePassword(@Valid @RequestBody PasswordUpdateRequest request) {
         return ResponseEntity.ok(userService.updatePassword(request));
+    }
+
+    @PostMapping("/findPassword")
+    public ResponseEntity<String> findPassword(@Valid @RequestBody FindPasswordRequest request) {
+        return ResponseEntity.ok(userService.findPassword(request));
+    }
+
+    @PutMapping("/resetPassword")
+    public ResponseEntity<Boolean> resetPassword(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(userService.resetPassword(request));
     }
 }

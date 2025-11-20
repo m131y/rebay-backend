@@ -115,6 +115,8 @@ public class StatisticsService {
         Map<Long, Long> likeScores = getAggregatedLikeScores(currentUser.getId());
         Map<String, Double> searchScores = getSearchScores(currentUser.getId());
 
+        log.info("likescores", likeScores);
+        log.info("searchscores", searchScores);
         List<RecommendedPostDto> scoredPosts = new ArrayList<>();
 
         for (PostResponse post : candidates) {

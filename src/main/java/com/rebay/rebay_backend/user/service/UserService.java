@@ -1,11 +1,9 @@
 package com.rebay.rebay_backend.user.service;
 
 import com.rebay.rebay_backend.social.repository.FollowRepository;
-import com.rebay.rebay_backend.user.dto.PasswordUpdateRequest;
-import com.rebay.rebay_backend.user.dto.UserDto;
-import com.rebay.rebay_backend.user.dto.UserResponse;
-import com.rebay.rebay_backend.user.dto.UserUpdateRequest;
+import com.rebay.rebay_backend.user.dto.*;
 import com.rebay.rebay_backend.user.entity.User;
+import com.rebay.rebay_backend.user.exception.AuthenticationException;
 import com.rebay.rebay_backend.user.exception.InvalidPasswordException;
 import com.rebay.rebay_backend.user.exception.ResourceNotFoundException;
 import com.rebay.rebay_backend.user.exception.UserAlreadyExistsException;
@@ -83,6 +81,31 @@ public class UserService {
         }
 
         currentUser.setPassword(passwordEncoder.encode(request.getNewPassword()));
+
+        User savedUser = userRepository.save(currentUser);
+        return true;
+    }
+
+    public String findPassword(FindPasswordRequest request) {
+        String loginId = request.getEmail() != null ? request.getEmail() : request.getUsername();
+
+        User user = userRepository.findByEmail(loginId)
+                .or(() -> userRepository.findByUsername(loginId))
+                .orElseThrow(() -> new AuthenticationException("로그인 ID가 유효하지 않습니다."));
+        //new AuthenticationException("Authentication failed"));
+
+        return user.getFullName();
+    }
+
+    public boolean resetPassword(LoginRequest request) {
+        String loginId = request.getEmail() != null ? request.getEmail() : request.getUsername();
+
+        User currentUser = userRepository.findByEmail(loginId)
+                .or(() -> userRepository.findByUsername(loginId))
+                .orElseThrow(() -> new AuthenticationException("로그인 ID가 유효하지 않습니다."));
+        //new AuthenticationException("Authentication failed"));
+
+        currentUser.setPassword(passwordEncoder.encode(request.getPassword()));
 
         User savedUser = userRepository.save(currentUser);
         return true;
