@@ -22,6 +22,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -41,15 +45,23 @@ public class PostService {
         Category currentCategory = categoryRepository.findByCode(request.getCategoryCode())
                 .orElseThrow(() -> new ResourceNotFoundException("카테고리를 찾을 수 없습니다."));
 
-        Post post = Post.builder()
+        List<String> images = sanitizeImages(request.getImageUrls());
 
+        //대표사진
+        String cover = (request.getImageUrl() != null && !request.getImageUrl().isBlank())
+                ? request.getImageUrl()
+                : (!images.isEmpty() ? images.get(0) : null);
+
+
+        Post post = Post.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
                 .price(request.getPrice())
                 .category(currentCategory)
-                .imageUrl(request.getImageUrl())
                 .status(SaleStatus.ON_SALE)
                 .user(currentUser)
+                .imageUrl(cover)
+                .imageUrls(images)
                 .build();
 
 
@@ -134,12 +146,18 @@ public class PostService {
             throw new UnauthorizedException("You are not authorized to update this post");
         }
 
+        List<String> images = sanitizeImages(request.getImageUrls());
+        String cover = (request.getImageUrl() != null && !request.getImageUrl().isBlank())
+                ? request.getImageUrl()
+                : (!images.isEmpty() ? images.get(0) : null);
+
         post.setTitle(request.getTitle());
         post.setContent(request.getContent());
         post.setPrice(request.getPrice());
         post.setCategory(currentCategory);
         post.setStatus(request.getStatus() == null ? SaleStatus.ON_SALE: request.getStatus() );
-        post.setImageUrl(request.getImageUrl());
+        post.setImageUrl(cover);
+        post.setImageUrls(images);
 
         post.getHashtags().clear();
 
@@ -180,6 +198,18 @@ public class PostService {
         return postRepository.countByUserId(userId);
     }
 
+    private List<String> sanitizeImages(List<String> src) {
+        if (src == null) return new ArrayList<>();
+        List<String> out = new ArrayList<>();
+        for (String s : src) {
+            if (s != null) {
+                String t = s.trim();
+                if (!t.isEmpty()) out.add(t);
+            }
+        }
+        return out;
+    }
+
+
+
 }
-
-

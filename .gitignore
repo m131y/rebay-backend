@@ -46,8 +46,6 @@ Thumbs.db
 !.env.example
 
 # 환경/비밀 정보
-application.yml
-application-*.yml
 local.properties
 
 # 임시 패키지 및 파일

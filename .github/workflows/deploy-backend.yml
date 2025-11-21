@@ -1,0 +1,176 @@
+name: Backend CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  DOCKER_REPO: rebay-backend # Docker 이미지 이름
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_REPO }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/rebay-backend:latest
+          cache-to: type=inline
+
+      - name: Deploy to EC2 (Backend Only)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/rebay-app || exit 1
+            echo "🔧 최신 환경변수 기반 .env 생성"
+            cat > .env <<EOL
+            DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+            POSTGRES_USER=${{ secrets.DB_USERNAME }}
+            POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+            POSTGRES_DB=${{ secrets.DB_NAME }}
+            DB_HOST=postgres
+            DB_PORT=5432
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+            GITHUB_CLIENT_ID=${{ secrets.GH_CLIENT_ID }}
+            GITHUB_CLIENT_SECRET=${{ secrets.GH_CLIENT_SECRET }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            TOSS_CLIENT_KEY=${{ secrets.TOSS_CLIENT_KEY }}
+            TOSS_SECRET_KEY=${{ secrets.TOSS_SECRET_KEY }}
+            EOL
+            echo "🔧 docker-compose.prod.yml 업데이트"
+            cat > docker-compose.prod.yml <<'EODOC'
+            version: '3.8'
+            services:
+              backend:
+                image: ${DOCKER_USERNAME}/rebay-backend:latest
+                container_name: rebay-backend
+                ports:
+                  - "3000:3000"
+                environment:
+                  - SPRING_PROFILES_ACTIVE=prod
+                  - DB_HOST=postgres
+                  - DB_USER=${POSTGRES_USER}
+                  - DB_PASSWORD=${POSTGRES_PASSWORD}
+                  - REDIS_HOST=redis
+                  - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+                  - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
+                  - AWS_REGION=${AWS_REGION}
+                  - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+                  - FRONTEND_URL=${FRONTEND_URL}
+                  - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+                  - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+                  - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+                  - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+                  - JWT_SECRET=${JWT_SECRET}
+                  # 🚨 [JWT FIX] 환경 변수 강제 주입
+                  - JWT_EXPIRATION=86400000 
+                  - JWT_REFRESH_EXPIRATION=604800000
+                  - TOSS_CLIENT_KEY=${TOSS_CLIENT_KEY}
+                  - TOSS_SECRET_KEY=${TOSS_SECRET_KEY}
+                  - DB_NAME=${POSTGRES_DB} 
+                  - DB_PORT=5432
+                  - DB_USERNAME=${POSTGRES_USER}
+                depends_on:
+                  - postgres
+                  - redis
+                networks:
+                  - rebay-network
+                restart: unless-stopped
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:3000/actuator/health"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+                  start_period: 40s
+                command: ["java", "-jar", "app.jar"]
+              frontend:
+                image: ${DOCKER_USERNAME}/rebay-frontend:latest
+                container_name: rebay-frontend
+                ports:
+                  - "80:80"
+                depends_on:
+                  - backend
+                networks:
+                  - rebay-network
+                restart: unless-stopped
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost/"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+                  start_period: 10s
+              postgres:
+                image: postgres:15-alpine
+                container_name: rebay_postgres
+                environment:
+                  - POSTGRES_USER=${POSTGRES_USER}
+                  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+                  - POSTGRES_DB=${POSTGRES_DB}
+                volumes:
+                  - postgres_data:/var/lib/postgresql/data
+                restart: unless-stopped
+                networks:
+                  - rebay-network
+              redis:
+                image: redis:7-alpine
+                container_name: rebay_redis
+                command: ["redis-server", "--appendonly", "yes"]
+                volumes:
+                  - redis_data:/data
+                healthcheck:
+                  test: ["CMD", "redis-cli", "ping"]
+                  interval: 5s
+                  timeout: 3s
+                  retries: 5
+                restart: unless-stopped
+                networks:
+                  - rebay-network
+            volumes:
+              postgres_data:
+              redis_data:
+            networks:
+              rebay-network:
+                driver: bridge
+            EODOC
+            echo "📥 Backend 이미지 Pull"
+            docker-compose -f docker-compose.prod.yml pull backend
+            echo "🚀 Backend 재시작"
+            docker-compose -f docker-compose.prod.yml up -d --no-deps backend
+            echo "🔍 상태 확인"
+            docker-compose -f docker-compose.prod.yml ps
+            echo "🧹 이미지 정리"
+            docker image prune -f
