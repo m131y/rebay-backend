@@ -1,5 +1,6 @@
 package com.rebay.rebay_backend.chat.controller;
 
+import com.rebay.rebay_backend.chat.dto.ChatRoomDto;
 import com.rebay.rebay_backend.chat.dto.RoomMessageEvent;
 import com.rebay.rebay_backend.chat.repository.ChatMessageRepository;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import com.rebay.rebay_backend.chat.service.ChatService;
 import com.rebay.rebay_backend.user.entity.User;
 import com.rebay.rebay_backend.user.service.AuthenticationService;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -41,6 +44,13 @@ public class ChatRestController {
     public Long createOrGetRoom(@RequestParam Long targetUserId) {
         User currentUser = authenticationService.getCurrentUser();
         return chatService.getOrCreateChatRoom(currentUser.getId(), targetUserId);
+    }
+
+    // 내 채팅방 목록 조회
+    @GetMapping("/rooms")
+    public List<ChatRoomDto> getMyChatRooms() {
+        User currentUser = authenticationService.getCurrentUser();
+        return chatService.getChatRooms(currentUser.getId());
     }
 
 }
