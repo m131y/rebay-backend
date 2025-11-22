@@ -125,7 +125,7 @@ public class AuctionService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AuctionResponse> getUserAuction(Long userId, Pageable pageable) {
+    public Page<AuctionResponse> getUserAuctions(Long userId, Pageable pageable) {
         User currentUser = authenticationService.getCurrentUser();
         Page<Auction> auctions = auctionRepository.findBySellerId(userId, pageable);
         return auctions.map(auction -> {
