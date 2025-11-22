@@ -41,6 +41,45 @@ public class PaymentService {
     private final TossPaymentConfig tossPaymentConfig;
 
 
+    // Transaction 재사용
+    private Transaction findOrCreateTransaction(Post post, User buyer, User seller) {
+        Transaction transaction = transactionRepository.findActiveTransaction(post.getId(), buyer.getId())
+                .orElse(null);
+
+        // 기존 거래 조회
+        if (transaction != null) {
+            log.info("[Transaction] 기존 거래 발견: id={}, status={}", transaction.getId(), transaction.getStatus());
+
+            // 만료 확인
+            if (transaction.isExpired()) {
+                transaction.expirePayment();
+                transactionRepository.save(transaction);
+                log.info("[Transaction] 만료된 거래 -> EXPIRED로 업데이트: id={}", transaction.getId());
+            } else if (transaction.getStatus() == TransactionStatus.PAYMENT_PENDING ||
+                    transaction.getStatus() == TransactionStatus.READY) {
+                // PAYMENT_PENDING / READY 상태면 재사용
+                log.info("[Transaction] 기존 거래 재사용: id={}", transaction.getId());
+                return transaction;
+            }
+        }
+
+        // 새 거래 생성
+        Transaction newTransaction = Transaction.builder()
+                .post(post)
+                .buyer(buyer)
+                .seller(seller)
+                .status(TransactionStatus.PAYMENT_PENDING)
+                .isReceived(false)
+                .build();
+
+        transactionRepository.save(newTransaction);
+        log.info("[Transaction] 새 거래 생성: id={}, status={}", newTransaction.getId(), newTransaction.getStatus());
+
+
+        return newTransaction;
+
+    }
+
     // 결제 준비 : Transaction, Payment 생성
     public TransactionResponse preparePayment(PaymentRequest request) {
         // 거래 게시글 조회
@@ -62,26 +101,31 @@ public class PaymentService {
             throw new IllegalArgumentException("자신의 상품은 구매할 수 없습니다.");
         }
 
-        // 거래 준비
-        Transaction transaction = Transaction.builder()
-                .post(post)
-                .buyer(buyer)
-                .seller(seller)
-                .status(TransactionStatus.PAYMENT_PENDING)
-                .isReceived(false)  // 거래 완료(물품 수령) 여부
-                .build();
+        Transaction transaction = findOrCreateTransaction(post, buyer, seller);
 
-        Transaction savedTransaction = transactionRepository.save(transaction);
+        // 상태 변경
+        transaction.readyPayment();
+        // transactionRepository.save(transaction);
+
+
+        Payment existingPayment = paymentRepository.findByTransactionId(transaction.getId())
+                .orElse(null);
+
+        if (existingPayment != null) {   // Payment 재사용
+            log.info("Payment 재사용: orderId={}, transactionId={}",
+                    existingPayment.getOrderId(), transaction.getId());
+            return toTransactionResponse(transaction, existingPayment.getOrderId());
+        }
 
         // 안전결제 생성
         String orderId = generateOrderId();
-        Payment payment = Payment.create(savedTransaction, orderId, post.getPrice());
+        Payment payment = Payment.create(transaction, orderId, post.getPrice());
         paymentRepository.save(payment);
 
         // 결제 준비 완료
         log.info("준비 완료: orderId={}, amount={}", orderId, post.getPrice(), post.getId());
 
-        return toTransactionResponse(savedTransaction, orderId);
+        return toTransactionResponse(transaction, orderId);
     }
 
     // 결제 승인

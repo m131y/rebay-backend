@@ -24,6 +24,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("SELECT t FROM Transaction t JOIN FETCH t.post JOIN FETCH t.buyer JOIN FETCH t.seller WHERE t.id = :transactionId")
     Optional<Transaction> findById(@Param("transactionId") Long transactionId);
 
+    @Query("SELECT t FROM Transaction t WHERE t.post.id = :postId AND t.buyer.id = :buyerId AND t.status IN ('PAYMENT_PENDING', 'READY')")
+    Optional<Transaction> findActiveTransaction(Long postId, Long buyerId);
+
     List<Transaction> findByStatus(TransactionStatus status);
 
     List<Transaction> findByStatusAndPostCategoryCode(TransactionStatus status, int categoryCode);

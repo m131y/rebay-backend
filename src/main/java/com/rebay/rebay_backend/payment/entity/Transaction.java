@@ -62,9 +62,20 @@ public class Transaction {
         this.status = TransactionStatus.SETTLEMENT_PENDING;
     }
 
+    public boolean isExpired() {
+        LocalDateTime expireAt = this.getCreatedAt().plusMinutes(10);
+        return LocalDateTime.now().isAfter(expireAt);
+    }
+
+    public void readyPayment() {
+        this.status = TransactionStatus.READY;
+    }
+
     public void confirmPayment() {
         this.status = TransactionStatus.PAID;
     }
 
     public void completeSettlement() { this.status = TransactionStatus.COMPLETED; }
+
+    public void expirePayment() { this.status = TransactionStatus.EXPIRED; }
 }
