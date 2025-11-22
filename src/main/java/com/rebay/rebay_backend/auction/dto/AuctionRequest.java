@@ -8,6 +8,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class AuctionRequest {
@@ -35,4 +36,9 @@ public class AuctionRequest {
     private int categoryCode;
 
     private SaleStatus status;
+
+    private List<String> hashtags;
+
+    /** 여러 장(순서가 의미 있음) — 선택 */
+    private List<String> imageUrls;
 }

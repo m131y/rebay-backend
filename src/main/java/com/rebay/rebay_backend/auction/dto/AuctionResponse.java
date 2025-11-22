@@ -1,5 +1,6 @@
 package com.rebay.rebay_backend.auction.dto;
 
+import com.rebay.rebay_backend.Post.dto.HashtagResponse;
 import com.rebay.rebay_backend.Post.entity.SaleStatus;
 import com.rebay.rebay_backend.auction.entity.Auction;
 import com.rebay.rebay_backend.user.dto.UserResponse;
@@ -11,6 +12,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 @Builder
@@ -32,6 +35,9 @@ public class AuctionResponse {
     private SaleStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private  boolean isLiked;
+    private Long likeCount;
+    private List<HashtagResponse> hashtags;
 
     public static AuctionResponse fromEntity(Auction auction, UserResponse userResponse) {
         return AuctionResponse.builder()
@@ -47,6 +53,9 @@ public class AuctionResponse {
                 .imageUrl(auction.getImageUrl())
                 .categoryCode(auction.getCategory().getCode())
                 .status(auction.getStatus())
+                .hashtags(auction.getHashtags().stream()
+                        .map(HashtagResponse::from)
+                        .collect(Collectors.toList()))
                 .createdAt(auction.getCreatedAt())
                 .updatedAt(auction.getUpdatedAt())
                 .build();

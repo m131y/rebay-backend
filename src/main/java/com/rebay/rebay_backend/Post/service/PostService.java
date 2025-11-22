@@ -64,7 +64,6 @@ public class PostService {
                 .imageUrls(images)
                 .build();
 
-
         if (request.getHashtags() != null && !request.getHashtags().isEmpty()) {
             for (String hashName : request.getHashtags()) {
                 Hashtag hashtag = hashTagRepository.findByName(hashName)
@@ -198,7 +197,7 @@ public class PostService {
         return postRepository.countByUserId(userId);
     }
 
-    private List<String> sanitizeImages(List<String> src) {
+    public List<String> sanitizeImages(List<String> src) {
         if (src == null) return new ArrayList<>();
         List<String> out = new ArrayList<>();
         for (String s : src) {

@@ -1,6 +1,7 @@
 package com.rebay.rebay_backend.social.repository;
 
 import com.rebay.rebay_backend.Post.entity.Post;
+import com.rebay.rebay_backend.auction.entity.Auction;
 import com.rebay.rebay_backend.social.entity.Like;
 import com.rebay.rebay_backend.user.entity.User;
 import org.springframework.data.domain.Page;
@@ -18,9 +19,14 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
     @Query("SELECT COUNT(l) FROM Like l WHERE l.post.id = :postId")
     Long countByPostId(@Param("postId") Long postId);
 
+    @Query("SELECT COUNT(l) FROM Like l WHERE l.auction.id = :auctionId")
+    Long countByAuctionId(@Param("auctionId") Long auctionId);
+
     Long countByUserId(Long userId);
 
     boolean existsByUserAndPost(User user, Post post);
+
+    boolean existsByUserAndAuction(User user, Auction auction);
 
     void deleteByUserAndPost(User user, Post post);
 

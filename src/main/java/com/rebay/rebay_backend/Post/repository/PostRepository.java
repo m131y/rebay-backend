@@ -31,7 +31,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     @Query("""
     SELECT p FROM Post p
-      WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      WHERE p.status = SaleStatus.ON_SALE
+      AND LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
   """)
     Page<Post> findByTitleContains(@Param("keyword") String keyword, Pageable pageable);
 
@@ -39,7 +40,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
       SELECT p
       FROM Post p
       join p.user u
-      where LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      WHERE p.status = SaleStatus.ON_SALE
+      AND LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
     """)
     Page<Post> findByUsernameContains(@Param("keyword") String keyword, Pageable pageable);
 
@@ -48,7 +50,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("""
        SELECT p FROM Post p
        JOIN p.hashtags h
-       WHERE LOWER(h.name) = LOWER(:name)
+       WHERE p.status = SaleStatus.ON_SALE
+       AND LOWER(h.name) = LOWER(:name)
     """)
     Page<Post> findByHashtagExact(@Param("name") String name, Pageable pageable);
 
