@@ -49,7 +49,7 @@ public class Transaction {
     @Builder.Default
     private TransactionStatus status = TransactionStatus.PAYMENT_PENDING;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     @CreationTimestamp
     private LocalDateTime createdAt;
 

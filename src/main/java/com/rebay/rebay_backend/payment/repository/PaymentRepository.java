@@ -22,4 +22,5 @@ public interface PaymentRepository extends JpaRepository <Payment, Long>{
             nativeQuery = true
     )
     List<Object[]> findTotalSalesAndUniqueUserCount();
+    List<Payment> findByTransactionIdIn(List<Long> transactionIds);
 }

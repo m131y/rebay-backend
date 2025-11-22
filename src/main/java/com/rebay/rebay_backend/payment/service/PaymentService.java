@@ -17,6 +17,10 @@ import com.rebay.rebay_backend.user.entity.User;
 import com.rebay.rebay_backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -232,24 +237,51 @@ public class PaymentService {
         return toTransactionResponse(transaction, payment.getOrderId());
     }
 
-    public List<TransactionResponse> getTransactionsByBuyerId(Long buyerId) {
-        return transactionRepository.findByBuyerId(buyerId).stream()
-                .map(transaction -> {
-                    Payment payment = paymentRepository.findByTransactionId(transaction.getId())
-                            .orElse(null);
-                    return toTransactionResponse(transaction, payment != null ? payment.getOrderId() : null);
-                })
-                .collect(Collectors.toList());
+    public Page<TransactionResponse> getTransactionsByBuyerId(Long buyerId, Pageable pageable) {
+        Page<Transaction> transactions = transactionRepository.findByBuyerId(buyerId, defaultSorting(pageable));
+
+        // 만료 처리 + DB 반영
+        transactions.forEach(t -> {
+            if ((t.getStatus() == TransactionStatus.PAYMENT_PENDING ||
+                    t.getStatus() == TransactionStatus.READY) && t.isExpired()) {
+                t.expirePayment();
+                log.info("[Transaction] 만료 처리: id={}", t.getId());
+            }
+        });
+
+
+        // Payment를 Transaction 마다 개별 조회(N+1) -> Payment 한 번에 조회로 변경 (IN 조회)
+        List<Long> transactionIds = transactions.map(Transaction::getId).toList();
+        Map<Long, Payment> paymentMap = paymentRepository.findByTransactionIdIn(transactionIds)
+                .stream()
+                .collect(Collectors.toMap(p -> p.getTransaction().getId(), p -> p));
+        return transactions.map(t -> {
+            Payment payment = paymentMap.get(t.getId());
+            return toTransactionResponse(t, payment != null ? payment.getOrderId() : null);
+        });
     }
 
-    public List<TransactionResponse> getTransactionsBySellerId(Long sellerId) {
-        return transactionRepository.findBySellerId(sellerId).stream()
-                .map(transaction -> {
-                    Payment payment = paymentRepository.findByTransactionId(transaction.getId())
-                            .orElse(null);
-                    return toTransactionResponse(transaction, payment != null ? payment.getOrderId() : null);
-                })
-                .collect(Collectors.toList());
+    public Page<TransactionResponse> getTransactionsBySellerId(Long sellerId, Pageable pageable) {
+        Page<Transaction> transactions = transactionRepository.findBySellerId(sellerId, defaultSorting(pageable));
+
+        // 만료 처리 + DB 반영
+        transactions.forEach(t -> {
+            if ((t.getStatus() == TransactionStatus.PAYMENT_PENDING ||
+                    t.getStatus() == TransactionStatus.READY) && t.isExpired()) {
+                t.expirePayment();
+                log.info("[Transaction] 만료 처리: id={}", t.getId());
+            }
+        });
+
+        List<Long> transactionIds = transactions.map(Transaction::getId).toList();
+        Map<Long, Payment> paymentMap = paymentRepository.findByTransactionIdIn(transactionIds)
+                .stream()
+                .collect(Collectors.toMap(p -> p.getTransaction().getId(), p -> p));
+
+        return transactions.map(t -> {
+            Payment payment = paymentMap.get(t.getId());
+            return toTransactionResponse(t, payment != null ? payment.getOrderId() : null);
+        });
     }
 
     private TransactionResponse toTransactionResponse(Transaction transaction, String orderId) {
@@ -257,10 +289,10 @@ public class PaymentService {
         User buyer = transaction.getBuyer();
         User seller = transaction.getSeller();
 
-        // Lazy Loading 방지
-        post.getTitle();
-        buyer.getUsername();
-        seller.getUsername();
+        // Lazy Loading 방지 -> EntityGraph로 로딩
+//        post.getTitle();
+//        buyer.getUsername();
+//        seller.getUsername();
 
         return TransactionResponse.builder()
                 .id(transaction.getId())
@@ -278,6 +310,21 @@ public class PaymentService {
                 .orderId(orderId)
                 .createdAt(transaction.getCreatedAt())
                 .build();
+    }
+
+    private Pageable defaultSorting(Pageable pageable) {
+
+        // 조건이 있다면 조건에 따라 정렬 (가격순, 상태순..)
+        if (pageable.getSort().isSorted()) {
+            return pageable;
+        }
+
+        // 기본 createdAt DESC (최신순) 정렬
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
     }
 
     private String generateOrderId() {
