@@ -9,7 +9,11 @@ import com.rebay.rebay_backend.user.exception.BadRequestException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
@@ -181,4 +185,77 @@ public class S3Service {
     private String generateFileName(MultipartFile file, String folder) {
         return folder + "/" + UUID.randomUUID().toString() + ".jpg";
     }
+
+    public byte[] downloadImageFromUrl(String imageUrl) throws IOException {
+        RestTemplate restTemplate = new RestTemplate();
+
+        try {
+            ResponseEntity<byte[]> response = restTemplate.getForEntity(
+                    imageUrl,
+                    byte[].class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                return response.getBody();
+            } else {
+                throw new IOException("이미지 다운로드 실패: 응답 코드 " + response.getStatusCode());
+            }
+        } catch (Exception e) {
+            throw new IOException("이미지 다운로드 중 오류 발생: " + e.getMessage(), e);
+        }
+    }
+
+    public String uploadImageBytes(byte[] imageBytes, String folder) {
+        if (s3Client == null) {
+            log.warn("S3 client not configured. Using local storage fallback.");
+            throw new RuntimeException("S3 not configured");
+        }
+
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new IllegalArgumentException("imageBytes is empty");
+        }
+
+        try {
+            InputStream inputStream = new ByteArrayInputStream(imageBytes);
+            BufferedImage originalImage = ImageIO.read(inputStream);
+
+            if (originalImage == null) {
+                throw new BadRequestException("Invalid image bytes");
+            }
+
+            BufferedImage squareImage = cropToSquare(originalImage);
+
+            BufferedImage resizedImage = resizeImage(squareImage, IMAGE_SIZE, IMAGE_SIZE);
+
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            ImageIO.write(resizedImage, "jpg", outputStream);
+
+            String fileName = folder + "/" + UUID.randomUUID().toString() + ".jpg";
+
+            byte[] finalBytes = outputStream.toByteArray();
+            InputStream finalInputStream = new ByteArrayInputStream(finalBytes);
+
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentType("image/jpeg");
+            metadata.setContentLength(finalBytes.length);
+
+            PutObjectRequest putObjectRequest = new PutObjectRequest(
+                    bucketName,
+                    fileName,
+                    finalInputStream,
+                    metadata
+            );
+
+            s3Client.putObject(putObjectRequest);
+
+            log.info("Successfully uploaded byte image to S3: {}", fileName);
+
+            return fileName;
+
+        } catch (IOException e) {
+            log.error("Failed to upload byte image to S3", e);
+            throw new RuntimeException("Failed to upload byte image", e);
+        }
+    }
+
 }
