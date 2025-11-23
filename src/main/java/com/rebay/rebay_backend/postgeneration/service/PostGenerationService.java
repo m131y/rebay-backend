@@ -27,7 +27,8 @@ public class PostGenerationService {
     private final CategoryRepository categoryRepository;
     private final ObjectMapper objectMapper;
 
-    @Value("${openai.api.key}")
+    // 기존 yml이 단일 키(openai.api.key)만 지원해서 기능별 키 구조(openai.keys.*)로 확장
+    @Value("${openai.keys.default}")
     private String apiKey;
 
     @Value("${openai.api.url:https://api.openai.com/v1/chat/completions}")

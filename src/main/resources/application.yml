@@ -45,8 +45,9 @@ toss:
       base-url: https://api.tosspayments.com/v1
 
 openai:
-  api:
-    key: ${OPENAI_API_KEY}
+  keys:
+    default: ${OPENAI_API_KEY}
+    chat: ${OPENAI_API_KEY_CHAT}
 
 server:
   port: 8080
