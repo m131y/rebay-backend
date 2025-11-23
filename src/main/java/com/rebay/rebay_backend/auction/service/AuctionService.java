@@ -63,8 +63,8 @@ public class AuctionService {
                 .seller(currentUser)
                 .title(request.getTitle())
                 .content(request.getContent())
-                .startPrice(request.getStartPrice())
-                .currentPrice(request.getStartPrice())
+                .price(request.getPrice())
+                .currentPrice(request.getPrice())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .imageUrl(cover)
@@ -165,8 +165,8 @@ public class AuctionService {
 
         currentAuction.setTitle(request.getTitle());
         currentAuction.setContent(request.getContent());
-        currentAuction.setStartPrice(request.getStartPrice());
-        currentAuction.setCurrentPrice(request.getStartPrice());
+        currentAuction.setPrice(request.getPrice());
+        currentAuction.setCurrentPrice(request.getPrice());
         currentAuction.setStartTime(request.getStartTime());
         currentAuction.setEndTime(request.getEndTime());
         currentAuction.setImageUrl(cover);

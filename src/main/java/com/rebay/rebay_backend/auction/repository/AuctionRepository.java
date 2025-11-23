@@ -10,9 +10,14 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface AuctionRepository extends JpaRepository<Auction, Long> {
     @Query("SELECT a FROM Auction a JOIN FETCH a.seller ORDER BY a.createdAt DESC")
     Page<Auction> findAllWithUser(Pageable pageable);
+
+    @Query("SELECT a FROM Auction a JOIN FETCH a.seller ORDER BY a.createdAt DESC")
+    List<Auction> findAllWithUser();
 
     //조회수 관련
     @Modifying(clearAutomatically = true, flushAutomatically = true)
