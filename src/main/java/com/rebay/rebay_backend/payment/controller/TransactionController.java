@@ -8,6 +8,9 @@ import com.rebay.rebay_backend.payment.repository.TransactionRepository;
 import com.rebay.rebay_backend.payment.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,14 +46,20 @@ public class TransactionController {
     }
 
     @GetMapping("/buyer/{buyerId}")
-    public ResponseEntity<List<TransactionResponse>> getBuyerTransactions(@PathVariable Long buyerId) {
-        List<TransactionResponse> responses = paymentService.getTransactionsByBuyerId(buyerId);
+    public ResponseEntity<Page<TransactionResponse>> getBuyerTransactions(
+            @PathVariable Long buyerId,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        Page<TransactionResponse> responses = paymentService.getTransactionsByBuyerId(buyerId, pageable);
         return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/seller/{sellerId}")
-    public ResponseEntity<List<TransactionResponse>> getSellerTransactions(@PathVariable Long sellerId) {
-        List<TransactionResponse> responses = paymentService.getTransactionsBySellerId(sellerId);
+    public ResponseEntity<Page<TransactionResponse>> getSellerTransactions(
+            @PathVariable Long sellerId,
+            @PageableDefault(size = 10) Pageable pageable
+    ) {
+        Page<TransactionResponse> responses = paymentService.getTransactionsBySellerId(sellerId, pageable);
         return ResponseEntity.ok(responses);
     }
 

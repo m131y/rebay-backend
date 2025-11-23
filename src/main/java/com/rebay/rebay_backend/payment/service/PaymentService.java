@@ -17,6 +17,10 @@ import com.rebay.rebay_backend.user.entity.User;
 import com.rebay.rebay_backend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,6 +45,45 @@ public class PaymentService {
     private final PostRepository postRepository;
     private final TossPaymentConfig tossPaymentConfig;
 
+
+    // Transaction 재사용
+    private Transaction findOrCreateTransaction(Post post, User buyer, User seller) {
+        Transaction transaction = transactionRepository.findActiveTransaction(post.getId(), buyer.getId())
+                .orElse(null);
+
+        // 기존 거래 조회
+        if (transaction != null) {
+            log.info("[Transaction] 기존 거래 발견: id={}, status={}", transaction.getId(), transaction.getStatus());
+
+            // 만료 확인
+            if (transaction.isExpired()) {
+                transaction.expirePayment();
+                transactionRepository.save(transaction);
+                log.info("[Transaction] 만료된 거래 -> EXPIRED로 업데이트: id={}", transaction.getId());
+            } else if (transaction.getStatus() == TransactionStatus.PAYMENT_PENDING ||
+                    transaction.getStatus() == TransactionStatus.READY) {
+                // PAYMENT_PENDING / READY 상태면 재사용
+                log.info("[Transaction] 기존 거래 재사용: id={}", transaction.getId());
+                return transaction;
+            }
+        }
+
+        // 새 거래 생성
+        Transaction newTransaction = Transaction.builder()
+                .post(post)
+                .buyer(buyer)
+                .seller(seller)
+                .status(TransactionStatus.PAYMENT_PENDING)
+                .isReceived(false)
+                .build();
+
+        transactionRepository.save(newTransaction);
+        log.info("[Transaction] 새 거래 생성: id={}, status={}", newTransaction.getId(), newTransaction.getStatus());
+
+
+        return newTransaction;
+
+    }
 
     // 결제 준비 : Transaction, Payment 생성
     public TransactionResponse preparePayment(PaymentRequest request) {
@@ -62,26 +106,31 @@ public class PaymentService {
             throw new IllegalArgumentException("자신의 상품은 구매할 수 없습니다.");
         }
 
-        // 거래 준비
-        Transaction transaction = Transaction.builder()
-                .post(post)
-                .buyer(buyer)
-                .seller(seller)
-                .status(TransactionStatus.PAYMENT_PENDING)
-                .isReceived(false)  // 거래 완료(물품 수령) 여부
-                .build();
+        Transaction transaction = findOrCreateTransaction(post, buyer, seller);
 
-        Transaction savedTransaction = transactionRepository.save(transaction);
+        // 상태 변경
+        transaction.readyPayment();
+        // transactionRepository.save(transaction);
+
+
+        Payment existingPayment = paymentRepository.findByTransactionId(transaction.getId())
+                .orElse(null);
+
+        if (existingPayment != null) {   // Payment 재사용
+            log.info("Payment 재사용: orderId={}, transactionId={}",
+                    existingPayment.getOrderId(), transaction.getId());
+            return toTransactionResponse(transaction, existingPayment.getOrderId());
+        }
 
         // 안전결제 생성
         String orderId = generateOrderId();
-        Payment payment = Payment.create(savedTransaction, orderId, post.getPrice());
+        Payment payment = Payment.create(transaction, orderId, post.getPrice());
         paymentRepository.save(payment);
 
         // 결제 준비 완료
         log.info("준비 완료: orderId={}, amount={}", orderId, post.getPrice(), post.getId());
 
-        return toTransactionResponse(savedTransaction, orderId);
+        return toTransactionResponse(transaction, orderId);
     }
 
     // 결제 승인
@@ -188,24 +237,51 @@ public class PaymentService {
         return toTransactionResponse(transaction, payment.getOrderId());
     }
 
-    public List<TransactionResponse> getTransactionsByBuyerId(Long buyerId) {
-        return transactionRepository.findByBuyerId(buyerId).stream()
-                .map(transaction -> {
-                    Payment payment = paymentRepository.findByTransactionId(transaction.getId())
-                            .orElse(null);
-                    return toTransactionResponse(transaction, payment != null ? payment.getOrderId() : null);
-                })
-                .collect(Collectors.toList());
+    public Page<TransactionResponse> getTransactionsByBuyerId(Long buyerId, Pageable pageable) {
+        Page<Transaction> transactions = transactionRepository.findByBuyerId(buyerId, defaultSorting(pageable));
+
+        // 만료 처리 + DB 반영
+        transactions.forEach(t -> {
+            if ((t.getStatus() == TransactionStatus.PAYMENT_PENDING ||
+                    t.getStatus() == TransactionStatus.READY) && t.isExpired()) {
+                t.expirePayment();
+                log.info("[Transaction] 만료 처리: id={}", t.getId());
+            }
+        });
+
+
+        // Payment를 Transaction 마다 개별 조회(N+1) -> Payment 한 번에 조회로 변경 (IN 조회)
+        List<Long> transactionIds = transactions.map(Transaction::getId).toList();
+        Map<Long, Payment> paymentMap = paymentRepository.findByTransactionIdIn(transactionIds)
+                .stream()
+                .collect(Collectors.toMap(p -> p.getTransaction().getId(), p -> p));
+        return transactions.map(t -> {
+            Payment payment = paymentMap.get(t.getId());
+            return toTransactionResponse(t, payment != null ? payment.getOrderId() : null);
+        });
     }
 
-    public List<TransactionResponse> getTransactionsBySellerId(Long sellerId) {
-        return transactionRepository.findBySellerId(sellerId).stream()
-                .map(transaction -> {
-                    Payment payment = paymentRepository.findByTransactionId(transaction.getId())
-                            .orElse(null);
-                    return toTransactionResponse(transaction, payment != null ? payment.getOrderId() : null);
-                })
-                .collect(Collectors.toList());
+    public Page<TransactionResponse> getTransactionsBySellerId(Long sellerId, Pageable pageable) {
+        Page<Transaction> transactions = transactionRepository.findBySellerId(sellerId, defaultSorting(pageable));
+
+        // 만료 처리 + DB 반영
+        transactions.forEach(t -> {
+            if ((t.getStatus() == TransactionStatus.PAYMENT_PENDING ||
+                    t.getStatus() == TransactionStatus.READY) && t.isExpired()) {
+                t.expirePayment();
+                log.info("[Transaction] 만료 처리: id={}", t.getId());
+            }
+        });
+
+        List<Long> transactionIds = transactions.map(Transaction::getId).toList();
+        Map<Long, Payment> paymentMap = paymentRepository.findByTransactionIdIn(transactionIds)
+                .stream()
+                .collect(Collectors.toMap(p -> p.getTransaction().getId(), p -> p));
+
+        return transactions.map(t -> {
+            Payment payment = paymentMap.get(t.getId());
+            return toTransactionResponse(t, payment != null ? payment.getOrderId() : null);
+        });
     }
 
     private TransactionResponse toTransactionResponse(Transaction transaction, String orderId) {
@@ -213,10 +289,10 @@ public class PaymentService {
         User buyer = transaction.getBuyer();
         User seller = transaction.getSeller();
 
-        // Lazy Loading 방지
-        post.getTitle();
-        buyer.getUsername();
-        seller.getUsername();
+        // Lazy Loading 방지 -> EntityGraph로 로딩
+//        post.getTitle();
+//        buyer.getUsername();
+//        seller.getUsername();
 
         return TransactionResponse.builder()
                 .id(transaction.getId())
@@ -234,6 +310,21 @@ public class PaymentService {
                 .orderId(orderId)
                 .createdAt(transaction.getCreatedAt())
                 .build();
+    }
+
+    private Pageable defaultSorting(Pageable pageable) {
+
+        // 조건이 있다면 조건에 따라 정렬 (가격순, 상태순..)
+        if (pageable.getSort().isSorted()) {
+            return pageable;
+        }
+
+        // 기본 createdAt DESC (최신순) 정렬
+        return PageRequest.of(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
     }
 
     private String generateOrderId() {
