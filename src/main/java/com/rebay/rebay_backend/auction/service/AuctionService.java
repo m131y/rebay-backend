@@ -13,10 +13,14 @@ import com.rebay.rebay_backend.auction.dto.AuctionRequest;
 import com.rebay.rebay_backend.auction.dto.AuctionResponse;
 import com.rebay.rebay_backend.auction.entity.Auction;
 import com.rebay.rebay_backend.auction.repository.AuctionRepository;
+import com.rebay.rebay_backend.auction.repository.BidHistoryRepository;
+import com.rebay.rebay_backend.auction.entity.BidHistory;
+import com.rebay.rebay_backend.notification.SseService;
 import com.rebay.rebay_backend.social.repository.LikeRepository;
 import com.rebay.rebay_backend.user.dto.UserResponse;
 import com.rebay.rebay_backend.user.entity.User;
 import com.rebay.rebay_backend.user.exception.ResourceNotFoundException;
+import com.rebay.rebay_backend.user.repository.UserRepository;
 import com.rebay.rebay_backend.user.service.AuthenticationService;
 import com.rebay.rebay_backend.user.service.UserService;
 import jakarta.persistence.*;
@@ -33,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -44,6 +49,10 @@ public class AuctionService {
     private final CategoryRepository categoryRepository;
     private final AuctionRepository auctionRepository;
     private final LikeRepository likeRepository;
+
+    private final UserRepository userRepository;
+    private final BidHistoryRepository bidHistoryRepository;
+    private final SseService sseService;
 
     public AuctionResponse createAuction(AuctionRequest request) {
         User currentUser = authenticationService.getCurrentUser();
@@ -211,5 +220,50 @@ public class AuctionService {
 
     public Long getAuctionsCountByUser(Long userId) {
         return auctionRepository.countBySellerId(userId);
+    }
+
+    // 입찰 메서드
+    @Transactional
+    public void placeBid(Long auctionId, BigDecimal bidAmount, Long bidderId) {
+        // 비관적 락으로 경매 조회 (동시성 제어)
+        Auction auction = auctionRepository.findByIdWithLock(auctionId)
+                .orElseThrow(() -> new ResourceNotFoundException("경매를 찾을 수 없습니다."));
+
+        // 유효성 검사
+        if (auction.getEndTime().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("이미 종료된 경매입니다.");
+        }
+        if (auction.getSeller().getId().equals(bidderId)) {
+            throw new IllegalArgumentException("판매자는 본인 상품에 입찰할 수 없습니다.");
+        }
+        if (bidAmount.compareTo(auction.getCurrentPrice()) <= 0) {
+            throw new IllegalArgumentException("현재 최고가보다 높은 금액을 제시해야 합니다.");
+        }
+
+        // 입찰 내역 저장
+        User bidder = userRepository.findById(bidderId)
+                .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
+
+        BidHistory bidHistory = BidHistory.builder()
+                .auction(auction)
+                .bidder(bidder)
+                .bidPrice(bidAmount)
+                .build();
+
+        bidHistoryRepository.save(bidHistory);
+
+        // 경매 현재가 업데이트
+        auction.setCurrentPrice(bidAmount);
+
+        // 변경된 가격 정보를 접속한 모든 사람에게 전송 (실시간/SSE)
+        Map<String, Object> updateData = Map.of(
+                "type", "PRICE_UPDATE",
+                "auctionId", auctionId,
+                "currentPrice", bidAmount,
+                "bidderId", bidderId,
+                "bidderName", bidder.getUsername()
+        );
+
+        sseService.broadcastToAuction(auctionId, updateData);
     }
 }

@@ -11,6 +11,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.rebay.rebay_backend.user.entity.User;
+import com.rebay.rebay_backend.user.service.AuthenticationService;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.math.BigDecimal;
+import java.util.Map;
 import java.util.List;
 
 @RestController
@@ -18,6 +24,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AuctionController {
     private final AuctionService auctionService;
+
+    private final AuthenticationService authenticationService;
+    private final com.rebay.rebay_backend.notification.SseService sseService;
 
     @PostMapping
     public ResponseEntity<AuctionResponse> createAuction(@Valid @RequestBody AuctionRequest request) {
@@ -59,6 +68,30 @@ public class AuctionController {
     public ResponseEntity<Void> deleteAuction(@PathVariable Long auctionId) {
         auctionService.deleteAuction(auctionId);
         return ResponseEntity.noContent().build();
+    }
+
+    // 입찰
+    @PostMapping("/{auctionId}/bid")
+    public ResponseEntity<Void> placeBid(
+            @PathVariable Long auctionId,
+            @RequestBody Map<String, BigDecimal> request
+    ) {
+        User currentUser = authenticationService.getCurrentUser();
+        BigDecimal amount = request.get("amount");
+
+        if (amount == null) {
+            throw new IllegalArgumentException("입찰 금액(amount)은 필수입니다.");
+        }
+
+        auctionService.placeBid(auctionId, amount, currentUser.getId());
+
+        return ResponseEntity.ok().build();
+    }
+
+    // 실시간 경매 연결 (SSE Stream)
+    @GetMapping(value = "/{auctionId}/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamAuction(@PathVariable Long auctionId) {
+        return sseService.subscribeAuction(auctionId);
     }
 
 }
