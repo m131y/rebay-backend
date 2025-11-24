@@ -21,6 +21,7 @@ public class AuctionResponse extends ProductCommonResponse {
     private BigDecimal currentPrice;
     private String startTime;
     private String endTime;
+    private List<String> imageUrls;
 
     public static AuctionResponse fromEntity(Auction auction, UserResponse userResponse) {
         return AuctionResponse.builder()
@@ -33,8 +34,9 @@ public class AuctionResponse extends ProductCommonResponse {
                 .startTime(auction.getStartTime().toString())
                 .endTime(auction.getEndTime().toString())
                 .viewCount(auction.getViewCount())
+                .imageUrls(auction.getImageUrls())
                 .thumbnailImageUrl(auction.getImageUrl())
-                .categoryCode(auction.getCategory().getCode())
+                .categoryCode(auction.getCategory().getCode()) 
                 .status(auction.getStatus())
                 .hashtags(auction.getHashtags().stream()
                         .map(HashtagResponse::from)

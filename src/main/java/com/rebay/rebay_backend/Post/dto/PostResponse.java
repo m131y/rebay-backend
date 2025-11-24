@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class PostResponse extends ProductCommonResponse {
 
     private BigDecimal price;
-    private List<String> imageUrls; // 여러 이미지 URL (대표 이미지 외)
+    private List<String> imageUrls;
 
     public static PostResponse fromEntity(Post post, UserResponse userResponse) {
 
