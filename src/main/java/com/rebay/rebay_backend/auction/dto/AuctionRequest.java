@@ -20,25 +20,23 @@ public class AuctionRequest {
     private String content;
 
     @NotNull(message = "Price is required")
-    private BigDecimal startPrice;
-
-    private BigDecimal currentPrice;
-
-    @NotNull(message = "start time is required")
-    private LocalDateTime startTime;
-
-    @NotNull(message = "end time is required")
-    private LocalDateTime endTime;
-
-    private String imageUrl;
+    private BigDecimal price;
 
     @NotNull(message = "Category is required")
     private int categoryCode;
 
     private SaleStatus status;
 
+    private String imageUrl;
+
     private List<String> hashtags;
 
     /** 여러 장(순서가 의미 있음) — 선택 */
     private List<String> imageUrls;
+
+    @NotNull(message = "start time is required")
+    private LocalDateTime startTime;
+
+    @NotNull(message = "end time is required")
+    private LocalDateTime endTime;
 }

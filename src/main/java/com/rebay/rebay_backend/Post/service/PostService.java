@@ -80,7 +80,7 @@ public class PostService {
         Post savedPost = postRepository.save(post);
         UserResponse userResponse = userService.mapToUserResponse(currentUser);
 
-        return PostResponse.from(savedPost, userResponse);
+        return PostResponse.fromEntity(savedPost, userResponse);
     }
 
     @Transactional(readOnly = true)
@@ -90,7 +90,7 @@ public class PostService {
         Page<Post> posts = postRepository.findAllWithUser(pageable);
         return posts.map(post -> {
             UserResponse userResponse = userService.mapToUserResponse(post.getUser());
-            PostResponse response = PostResponse.from(post,userResponse);
+            PostResponse response = PostResponse.fromEntity(post,userResponse);
             Long likeCount = likeRepository.countByPostId(post.getId());
             boolean isLiked = likeRepository.existsByUserAndPost(currentUser, post);
 
@@ -107,7 +107,7 @@ public class PostService {
         Page<Post> posts = postRepository.findByUserId(userId, pageable);
         return posts.map(post -> {
             UserResponse userResponse = userService.mapToUserResponse(post.getUser());
-            PostResponse response = PostResponse.from(post, userResponse);
+            PostResponse response = PostResponse.fromEntity(post, userResponse);
             Long likeCount = likeRepository.countByPostId(post.getId());
             boolean isLiked = likeRepository.existsByUserAndPost(currentUser, post);
 
@@ -127,7 +127,7 @@ public class PostService {
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found"));
         UserResponse userResponse = userService.mapToUserResponse(post.getUser());
 
-        return PostResponse.from(post, userResponse);
+        return PostResponse.fromEntity(post, userResponse);
     }
 
 
@@ -176,7 +176,7 @@ public class PostService {
         Post updatedPost = postRepository.save(post);
         UserResponse userResponse = userService.mapToUserResponse(currentUser);
 
-        return PostResponse.from(updatedPost, userResponse);
+        return PostResponse.fromEntity(updatedPost, userResponse);
     }
 
     public void deletePost(Long postId) {

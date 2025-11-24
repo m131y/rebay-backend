@@ -38,6 +38,16 @@ public class AuctionController {
         return ResponseEntity.ok(auctions);
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<Page<AuctionResponse>> getUserAuctions(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(auctionService.getUserAuctions(userId, pageable));
+    }
+
     @PutMapping("/{auctionId}")
     public ResponseEntity<AuctionResponse> updateAuction(
             @PathVariable Long auctionId,
@@ -51,4 +61,5 @@ public class AuctionController {
         auctionService.deleteAuction(auctionId);
         return ResponseEntity.noContent().build();
     }
+
 }

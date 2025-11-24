@@ -13,9 +13,11 @@ import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-
     @Query("SELECT p FROM Post p JOIN FETCH p.user ORDER BY p.createdAt DESC")
     Page<Post> findAllWithUser(Pageable pageable);
+
+    @Query("SELECT p FROM Post p JOIN FETCH p.user ORDER BY p.createdAt DESC")
+    List<Post> findAllWithUser();
 
     @Query("SELECT p FROM Post p JOIN FETCH p.user WHERE p.user.id = :userId ORDER BY p.createdAt DESC")
     Page<Post> findByUserId(@Param("userId") Long userId, Pageable pageable);
