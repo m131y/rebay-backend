@@ -57,7 +57,7 @@ public class StatisticsService {
     public List<PostResponse> getTopLikedProductsLastWeek() {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);
         List<Post> posts = likeRepository.findTopLikedPostsLastWeek(oneWeekAgo);
-        return posts.stream().map(post -> PostResponse.from(post, UserResponse.builder().build())).toList();
+        return posts.stream().map(post -> PostResponse.fromEntity(post, UserResponse.builder().build())).toList();
     }
 
 
@@ -105,7 +105,7 @@ public class StatisticsService {
         User currentUser = authenticationService.getCurrentUser();
 
         List<Post> posts = postRepository.findRecommendationCandidates(currentUser.getId());
-        List<PostResponse> candidates = posts.stream().map(post -> PostResponse.from(post, userService.mapToUserResponse(post.getUser()))).collect(Collectors.toList());
+        List<PostResponse> candidates = posts.stream().map(post -> PostResponse.fromEntity(post, userService.mapToUserResponse(post.getUser()))).collect(Collectors.toList());
 
         // 좋아요 기록이 5개 미만인 경우 주간 인기 상품 반환
         if (likeRepository.countByUserId(currentUser.getId()) < 5) {
@@ -115,8 +115,6 @@ public class StatisticsService {
         Map<Long, Long> likeScores = getAggregatedLikeScores(currentUser.getId());
         Map<String, Double> searchScores = getSearchScores(currentUser.getId());
 
-        log.info("likescores", likeScores);
-        log.info("searchscores", searchScores);
         List<RecommendedPostDto> scoredPosts = new ArrayList<>();
 
         for (PostResponse post : candidates) {

@@ -36,7 +36,7 @@ public class SearchController {
     ) {
         return searchService.searchPost(keyword, target, pageable)
                 .map(post -> { UserResponse userResponse = userService.mapToUserResponse(post.getUser());
-                    return PostResponse.from(post, userResponse);});
+                    return PostResponse.fromEntity(post, userResponse);});
     }
 
     @GetMapping("/history")

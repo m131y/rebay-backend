@@ -11,6 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/auction")
 @RequiredArgsConstructor
@@ -38,6 +40,13 @@ public class AuctionController {
         return ResponseEntity.ok(auctions);
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<AuctionResponse>> getUserAuctions(
+            @PathVariable Long userId
+    ) {
+        return ResponseEntity.ok(auctionService.getUserAuctions(userId));
+    }
+
     @PutMapping("/{auctionId}")
     public ResponseEntity<AuctionResponse> updateAuction(
             @PathVariable Long auctionId,
@@ -51,4 +60,5 @@ public class AuctionController {
         auctionService.deleteAuction(auctionId);
         return ResponseEntity.noContent().build();
     }
+
 }
