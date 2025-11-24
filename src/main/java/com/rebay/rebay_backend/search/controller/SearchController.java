@@ -1,10 +1,8 @@
 package com.rebay.rebay_backend.search.controller;
 
-import com.rebay.rebay_backend.Post.dto.PostResponse;
 import com.rebay.rebay_backend.integratedProduct.dto.ProductFeedItem;
 import com.rebay.rebay_backend.search.entity.SearchTarget;
 import com.rebay.rebay_backend.search.service.SearchService;
-import com.rebay.rebay_backend.user.dto.UserResponse;
 import com.rebay.rebay_backend.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
