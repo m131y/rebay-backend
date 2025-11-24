@@ -4,9 +4,11 @@ import com.rebay.rebay_backend.Post.dto.PostResponse;
 import com.rebay.rebay_backend.Post.entity.Post;
 import com.rebay.rebay_backend.Post.entity.SaleStatus; // SaleStatus import 추가
 import com.rebay.rebay_backend.Post.repository.PostRepository;
+import com.rebay.rebay_backend.Post.service.PostService;
 import com.rebay.rebay_backend.auction.dto.AuctionResponse;
 import com.rebay.rebay_backend.auction.entity.Auction;
 import com.rebay.rebay_backend.auction.repository.AuctionRepository;
+import com.rebay.rebay_backend.auction.service.AuctionService;
 import com.rebay.rebay_backend.integratedProduct.dto.IntegratedProductResponse;
 import com.rebay.rebay_backend.integratedProduct.dto.ProductFeedItem;
 import com.rebay.rebay_backend.integratedProduct.dto.ProductType; // ProductType import 추가
@@ -30,6 +32,8 @@ public class IntegratedProductRepository {
     private final PostRepository postRepository;
     private final AuctionRepository auctionRepository;
     private final UserService userService;
+    private final PostService postService;
+    private final AuctionService auctionService;
 
     public Page<ProductFeedItem> findIntegratedProducts(
             int page,
@@ -69,9 +73,20 @@ public class IntegratedProductRepository {
                 // 카테고리 필터링
                 .filter(product -> {
                     if (categoryCode == null) {
-                        return true; // 카테고리 필터가 없으면 모두 포함
+                        return true;
                     }
-                    return product.getProductData().getCategoryCode() == categoryCode;
+                    int productCode = product.getProductData().getCategoryCode();
+                    int filterCode = categoryCode.intValue();
+
+                    if (filterCode % 100 == 0) {
+                        return (productCode >= filterCode) && (productCode <= filterCode + 99);
+                    }
+                    else if (filterCode % 10 == 0) {
+                        return (productCode >= filterCode) && (productCode <= filterCode + 9);
+                    }
+                    else {
+                        return productCode == filterCode;
+                    }
                 })
                 // 판매 완료 제외 필터링
                 .filter(product -> {
@@ -132,5 +147,20 @@ public class IntegratedProductRepository {
                 pageable,
                 totalElements
         );
+    }
+
+    public List<ProductFeedItem> findUserIntegratedProducts(Long userId) {
+        List<PostResponse> postData = postService.getUserPost(userId);
+        List<AuctionResponse> auctionData = auctionService.getUserAuctions(userId);
+
+        List<IntegratedProductResponse> allIntegratedProducts = new ArrayList<>();
+        postData.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
+        auctionData.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
+
+        List<ProductFeedItem> userProducts = allIntegratedProducts.stream()
+                .map(IntegratedProductResponse::toProductFeedItem)
+                .collect(Collectors.toList());
+
+        return userProducts;
     }
 }

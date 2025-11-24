@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -45,13 +46,10 @@ public class PostController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<PostResponse>> getUserPosts(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+    public ResponseEntity<List<PostResponse>> getUserPosts(
+            @PathVariable Long userId
     ) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<PostResponse> posts = postService.getUserPost(userId, pageable);
+        List<PostResponse> posts = postService.getUserPost(userId);
         return ResponseEntity.ok(posts);
     }
 

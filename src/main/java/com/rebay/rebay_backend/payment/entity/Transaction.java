@@ -1,6 +1,7 @@
 package com.rebay.rebay_backend.payment.entity;
 
 import com.rebay.rebay_backend.Post.entity.Post;
+import com.rebay.rebay_backend.auction.entity.Auction;
 import com.rebay.rebay_backend.review.entity.Review;
 import com.rebay.rebay_backend.user.entity.User;
 import jakarta.persistence.*;
@@ -28,6 +29,12 @@ public class Transaction {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Post post;
+
+    @Enumerated(EnumType.STRING)
+    private TransactionType transactionType;  // DEFAULT or AUCTION
+
+    @Enumerated(EnumType.STRING)
+    private AuctionStatus auctionStatus;      // BIDDING / WON / LOSE
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "buyer_id", nullable = false)
