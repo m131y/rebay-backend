@@ -25,7 +25,6 @@ public class PostResponse extends ProductCommonResponse {
     private List<String> imageUrls;
 
     public static PostResponse fromEntity(Post post, UserResponse userResponse) {
-
         return PostResponse.builder()
                 .id(post.getId())
                 .title(post.getTitle())
@@ -42,7 +41,6 @@ public class PostResponse extends ProductCommonResponse {
                         .collect(Collectors.toList()))
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
-
                 .build();
     }
 }

@@ -157,7 +157,28 @@ public class IntegratedProductRepository {
         postData.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
         auctionData.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
 
+        return fromIntegratedProductToFeedItem(allIntegratedProducts);
+    }
+
+    public List<IntegratedProductResponse> fromDataToIntegratedProduct(List<Post> postData, List<Auction> auctionData) {
+        List<PostResponse> posts = postData.stream()
+                .map(post -> PostResponse.fromEntity(post, userService.mapToUserResponse(post.getUser())))
+                .toList();
+
+        List<AuctionResponse> auctions = auctionData.stream()
+                .map(auction -> AuctionResponse.fromEntity(auction, userService.mapToUserResponse(auction.getSeller())))
+                .toList();
+
+        List<IntegratedProductResponse> allIntegratedProducts = new ArrayList<>();
+        posts.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
+        auctions.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
+
+        return allIntegratedProducts;
+    }
+
+    public List<ProductFeedItem> fromIntegratedProductToFeedItem(List<IntegratedProductResponse> allIntegratedProducts) {
         List<ProductFeedItem> userProducts = allIntegratedProducts.stream()
+                .sorted(Comparator.comparing(IntegratedProductResponse::getCreatedAt).reversed())
                 .map(IntegratedProductResponse::toProductFeedItem)
                 .collect(Collectors.toList());
 

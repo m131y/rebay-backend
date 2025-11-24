@@ -36,7 +36,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
       WHERE p.status = SaleStatus.ON_SALE
       AND LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
   """)
-    Page<Post> findByTitleContains(@Param("keyword") String keyword, Pageable pageable);
+    List<Post> findByTitleContains(@Param("keyword") String keyword);
 
     @Query("""
       SELECT p
@@ -45,7 +45,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
       WHERE p.status = SaleStatus.ON_SALE
       AND LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
     """)
-    Page<Post> findByUsernameContains(@Param("keyword") String keyword, Pageable pageable);
+    List<Post> findByUsernameContains(@Param("keyword") String keyword);
 
     //입력한 tag만 검색
     @EntityGraph(attributePaths = {"user", "hashtags"})
@@ -55,7 +55,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
        WHERE p.status = SaleStatus.ON_SALE
        AND LOWER(h.name) = LOWER(:name)
     """)
-    Page<Post> findByHashtagExact(@Param("name") String name, Pageable pageable);
+    List<Post> findByHashtagExact(@Param("name") String name);
 
     // 이미 판매 완료되거나, 사용자가 작성한 게시글 제외하고 조회
     @Query("SELECT p FROM Post p " +

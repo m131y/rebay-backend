@@ -7,6 +7,12 @@ import com.rebay.rebay_backend.Post.entity.Post;
 import com.rebay.rebay_backend.Post.entity.ProductCategory;
 import com.rebay.rebay_backend.Post.repository.CategoryRepository;
 import com.rebay.rebay_backend.Post.repository.PostRepository;
+import com.rebay.rebay_backend.auction.dto.AuctionResponse;
+import com.rebay.rebay_backend.auction.entity.Auction;
+import com.rebay.rebay_backend.auction.repository.AuctionRepository;
+import com.rebay.rebay_backend.auction.service.AuctionService;
+import com.rebay.rebay_backend.integratedProduct.dto.IntegratedProductResponse;
+import com.rebay.rebay_backend.integratedProduct.dto.ProductFeedItem;
 import com.rebay.rebay_backend.payment.entity.Transaction;
 import com.rebay.rebay_backend.payment.entity.TransactionStatus;
 import com.rebay.rebay_backend.payment.repository.PaymentRepository;
@@ -50,16 +56,45 @@ public class StatisticsService {
     private final PostRepository postRepository;
     private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
+    private final AuctionRepository auctionRepository;
+    private final AuctionService auctionService;
     private final UserService userService;
     private final AuthenticationService authenticationService;
 
 
-    public List<PostResponse> getTopLikedProductsLastWeek() {
+    public List<PostResponse> getTopLikedPostLastWeek() {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);
         List<Post> posts = likeRepository.findTopLikedPostsLastWeek(oneWeekAgo);
         return posts.stream().map(post -> PostResponse.fromEntity(post, UserResponse.builder().build())).toList();
     }
 
+    public List<ProductFeedItem> getTopLikedProductsLastWeek() {
+        LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);
+        List<Post> postData = likeRepository.findTopLikedPostsLastWeek(oneWeekAgo);
+        List<Auction> auctionData = likeRepository.findTopLikedAuctionsLastWeek(oneWeekAgo);
+
+        System.out.println(postData);
+        System.out.println(auctionData);
+
+        List<PostResponse> posts = postData.stream()
+                .map(post -> PostResponse.fromEntity(post, userService.mapToUserResponse(post.getUser())))
+                .toList();
+
+        List<AuctionResponse> auctions = auctionData.stream()
+                .map(auction -> AuctionResponse.fromEntity(auction, userService.mapToUserResponse(auction.getSeller())))
+                .toList();
+
+        List<IntegratedProductResponse> allIntegratedProducts = new ArrayList<>();
+        posts.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
+        auctions.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
+
+        List<ProductFeedItem> userProducts = allIntegratedProducts.stream()
+                .sorted(Comparator.comparing(IntegratedProductResponse::getCreatedAt).reversed())
+                .map(IntegratedProductResponse::toProductFeedItem)
+                .collect(Collectors.toList());
+
+        return userProducts;
+    }
 
     public Set<String> getDailyTop10Keywords() {
         LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
@@ -93,19 +128,25 @@ public class StatisticsService {
         if (totalSales.compareTo(BigDecimal.ZERO) == 0 || uniqueUserCount == null || uniqueUserCount == 0) {
             return BigDecimal.ZERO;
         }
-        log.info("uniqueUserCount: ",uniqueUserCount);
 
         BigDecimal divisor = BigDecimal.valueOf(uniqueUserCount);
 
         return totalSales.divide(divisor, 2, RoundingMode.HALF_UP);
     }
 
-    public List<PostResponse> getPersonalizedRecommendations() {
+    public List<ProductFeedItem> getPersonalizedRecommendations() {
 
         User currentUser = authenticationService.getCurrentUser();
 
         List<Post> posts = postRepository.findRecommendationCandidates(currentUser.getId());
-        List<PostResponse> candidates = posts.stream().map(post -> PostResponse.fromEntity(post, userService.mapToUserResponse(post.getUser()))).collect(Collectors.toList());
+        List<PostResponse> postCandidates = posts.stream().map(post -> PostResponse.fromEntity(post, userService.mapToUserResponse(post.getUser()))).collect(Collectors.toList());
+
+        List<Auction> auctions = auctionRepository.findRecommendationCandidates(currentUser.getId());
+        List<AuctionResponse> auctionCandidates = auctions.stream().map(auction -> AuctionResponse.fromEntity(auction, userService.mapToUserResponse(auction.getSeller()))).collect(Collectors.toList());
+
+        List<IntegratedProductResponse> allIntegratedProducts = new ArrayList<>();
+        postCandidates.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
+        auctionCandidates.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
 
         // 좋아요 기록이 5개 미만인 경우 주간 인기 상품 반환
         if (likeRepository.countByUserId(currentUser.getId()) < 5) {
@@ -117,24 +158,30 @@ public class StatisticsService {
 
         List<RecommendedPostDto> scoredPosts = new ArrayList<>();
 
-        for (PostResponse post : candidates) {
-            double sLike = calculateLikeScore(post, likeScores);
-            double sSearch = calculateSearchScore(post, searchScores);
+        for (IntegratedProductResponse response : allIntegratedProducts) {
+            double sLike = calculateLikeScore(response, likeScores);
+            double sSearch = calculateSearchScore(response, searchScores);
 
             double score = W_LIKE * sLike + W_SEARCH * sSearch;
 
-            System.out.println(post.getId() + " : score("+score+") = sLike(" +sLike+") + sSearch("+sSearch+")");
+            System.out.println(response.getProductData().getId() + " : score("+score+") = sLike(" +sLike+") + sSearch("+sSearch+")");
 
             if (score > 0) {
-                scoredPosts.add(new RecommendedPostDto(post, score));
+                scoredPosts.add(new RecommendedPostDto(response, score));
             }
         }
 
-        return scoredPosts.stream()
+        List<IntegratedProductResponse> integratedProductResponse = scoredPosts.stream()
                 .sorted(Comparator.comparingDouble(RecommendedPostDto::getScore).reversed())
                 .limit(20)
-                .map(RecommendedPostDto::getPost)
+                .map(RecommendedPostDto::getProduct)
                 .collect(Collectors.toList());
+
+        List<ProductFeedItem> feedItems = integratedProductResponse.stream()
+                .map(IntegratedProductResponse::toProductFeedItem)
+                .collect(Collectors.toList());
+
+        return feedItems;
     }
 
     private Map<Long, Long> getAggregatedLikeScores(Long userId) {
@@ -205,13 +252,13 @@ public class StatisticsService {
         return weightedScores;
     }
 
-    // 좋아요 기반 점수 계산. 카테고리 계층을 순회하며 각 레벨에 따라 가중치를 적용하여 합산합니다.
-    private double calculateLikeScore(PostResponse post, Map<Long, Long> likeScores) {
-        int postCategoryCode = post.getCategoryCode();
-        Category leafCategory = categoryRepository.findByCode(postCategoryCode).orElse(null);
+    // 좋아요 기반 점수 계산. 카테고리 계층을 순회하며 각 레벨에 따라 가중치를 적용하여 합산
+    private double calculateLikeScore(IntegratedProductResponse response, Map<Long, Long> likeScores) {
+        int categoryCode = response.getProductData().getCategoryCode();
+        Category leafCategory = categoryRepository.findByCode(categoryCode).orElse(null);
 
         if (leafCategory == null) {
-            log.error("Candidate Post ID {} has invalid Category ID {}. Score 0.0 returned.", post.getId(), leafCategory.getId());
+            log.error("Candidate Post ID {} has invalid Category ID {}. Score 0.0 returned.", response.getProductData().getId(), leafCategory.getId());
             return 0.0;
         }
 
@@ -255,16 +302,16 @@ public class StatisticsService {
     }
 
     // 검색 기반 점수 계산 (예시: 해시태그와 검색 키워드 일치 시 가중치 점수 부여)
-    private double calculateSearchScore(PostResponse post, Map<String, Double> searchScores) {
+    private double calculateSearchScore(IntegratedProductResponse response, Map<String, Double> searchScores) {
         double score = 0.0;
 
         for (Map.Entry<String, Double> entry : searchScores.entrySet()) {
-            if (post.getTitle().toLowerCase().contains(entry.getKey().toLowerCase())) {
+            if (response.getProductData().getTitle().toLowerCase().contains(entry.getKey().toLowerCase())) {
                 score += entry.getValue();
             }
         }
 
-        for (HashtagResponse tag : post.getHashtags()) {
+        for (HashtagResponse tag : response.getProductData().getHashtags()) {
             score += searchScores.getOrDefault(tag.getName(), 0.0);
         }
         return score;

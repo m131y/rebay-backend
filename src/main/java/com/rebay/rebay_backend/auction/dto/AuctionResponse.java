@@ -3,6 +3,7 @@ package com.rebay.rebay_backend.auction.dto;
 import com.rebay.rebay_backend.Post.dto.HashtagResponse;
 import com.rebay.rebay_backend.Post.entity.SaleStatus;
 import com.rebay.rebay_backend.auction.entity.Auction;
+import com.rebay.rebay_backend.auction.service.AuctionService;
 import com.rebay.rebay_backend.integratedProduct.dto.ProductCommonResponse;
 import com.rebay.rebay_backend.user.dto.UserResponse;
 

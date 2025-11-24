@@ -30,6 +30,8 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
 
     void deleteByUserAndPost(User user, Post post);
 
+    void deleteByUserAndAuction(User user, Auction auction);
+
     // 일주일 내 좋아요가 가장 많은 Post들을 좋아요 수 기준 내림차순으로 페이지 조회
     @Query(
             value = "SELECT p.* " +
@@ -47,6 +49,25 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
             nativeQuery = true
     )
     List<Post> findTopLikedPostsLastWeek(@Param("oneWeekAgo") LocalDateTime oneWeekAgo);
+
+    // 일주일 내 좋아요가 가장 많은 Auction들을 좋아요 수 기준 내림차순으로 페이지 조회
+    @Query(
+            value = "SELECT a.* " +
+                    "FROM auctions a " +
+                    "INNER JOIN (" +
+                    "    SELECT l.auction_id, COUNT(l.auction_id) as like_count " +
+                    "    FROM likes l " +
+                    "    WHERE l.created_at >= :oneWeekAgo " +
+                    "    GROUP BY l.auction_id " +
+                    ") AS weekly_likes " +
+                    "ON a.id = weekly_likes.auction_id " +
+                    "WHERE a.status = 'ON_SALE' " +
+                    "ORDER BY weekly_likes.like_count DESC " +
+                    "LIMIT 10",
+            nativeQuery = true
+    )
+    List<Auction> findTopLikedAuctionsLastWeek(@Param("oneWeekAgo") LocalDateTime oneWeekAgo);
+
 
     // 특정 유저가 좋아요를 누른 게시글들의 카테고리별 카운트와 Post ID를 조회
     @Query(
