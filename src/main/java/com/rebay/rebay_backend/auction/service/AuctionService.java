@@ -63,8 +63,8 @@ public class AuctionService {
                 .seller(currentUser)
                 .title(request.getTitle())
                 .content(request.getContent())
-                .startPrice(request.getStartPrice())
-                .currentPrice(request.getStartPrice())
+                .price(request.getPrice())
+                .currentPrice(request.getPrice())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
                 .imageUrl(cover)
@@ -125,10 +125,10 @@ public class AuctionService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AuctionResponse> getUserAuction(Long userId, Pageable pageable) {
+    public List<AuctionResponse> getUserAuctions(Long userId) {
         User currentUser = authenticationService.getCurrentUser();
-        Page<Auction> auctions = auctionRepository.findBySellerId(userId, pageable);
-        return auctions.map(auction -> {
+        List<Auction> auctions = auctionRepository.findBySellerId(userId);
+        return auctions.stream().map(auction -> {
             UserResponse userResponse = userService.mapToUserResponse(auction.getSeller());
             AuctionResponse response = AuctionResponse.fromEntity(auction, userResponse);
             Long likeCount = likeRepository.countByAuctionId(auction.getId());
@@ -137,7 +137,7 @@ public class AuctionService {
             response.setLiked(isLiked);
             response.setLikeCount(likeCount);
             return response;
-        });
+        }).toList();
     }
 
     public AuctionResponse updateAuction(Long auctionId, AuctionRequest request) {
@@ -165,8 +165,8 @@ public class AuctionService {
 
         currentAuction.setTitle(request.getTitle());
         currentAuction.setContent(request.getContent());
-        currentAuction.setStartPrice(request.getStartPrice());
-        currentAuction.setCurrentPrice(request.getStartPrice());
+        currentAuction.setPrice(request.getPrice());
+        currentAuction.setCurrentPrice(request.getPrice());
         currentAuction.setStartTime(request.getStartTime());
         currentAuction.setEndTime(request.getEndTime());
         currentAuction.setImageUrl(cover);

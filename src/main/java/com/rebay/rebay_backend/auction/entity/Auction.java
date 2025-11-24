@@ -41,8 +41,8 @@ public class Auction {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Column(name = "start_price", nullable = false)
-    private BigDecimal startPrice;
+    @Column(name = "price", nullable = false)
+    private BigDecimal price;
 
     @Column(name = "current_price", nullable = false)
     private BigDecimal currentPrice;

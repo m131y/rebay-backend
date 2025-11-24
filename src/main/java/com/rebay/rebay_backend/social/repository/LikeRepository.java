@@ -41,6 +41,7 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
                     "    GROUP BY l.post_id " +
                     ") AS weekly_likes " +
                     "ON p.id = weekly_likes.post_id " +
+                    "WHERE p.status = 'ON_SALE' " +
                     "ORDER BY weekly_likes.like_count DESC " +
                     "LIMIT 10",
             nativeQuery = true
