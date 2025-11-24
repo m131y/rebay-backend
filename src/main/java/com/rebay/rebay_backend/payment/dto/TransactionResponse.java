@@ -1,5 +1,6 @@
 package com.rebay.rebay_backend.payment.dto;
 
+import com.rebay.rebay_backend.payment.entity.AuctionStatus;
 import com.rebay.rebay_backend.payment.entity.Transaction;
 import com.rebay.rebay_backend.payment.entity.TransactionStatus;
 import lombok.AllArgsConstructor;
@@ -28,6 +29,7 @@ public class TransactionResponse {
     private String clientKey;
     private LocalDateTime receivedAt;
     private TransactionStatus status;
+    private AuctionStatus auctionStatus;
     private String orderId;
     private LocalDateTime createdAt;
 
@@ -45,6 +47,7 @@ public class TransactionResponse {
                 .clientKey(clientKey)
                 .receivedAt(transaction.getReceivedAt())
                 .status(transaction.getStatus())
+                .auctionStatus(transaction.getAuctionStatus())
                 .orderId(orderId)
                 .createdAt(transaction.getCreatedAt())
                 .build();
