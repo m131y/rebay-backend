@@ -20,7 +20,7 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findAllWithUser();
 
     @Query("SELECT p FROM Post p JOIN FETCH p.user WHERE p.user.id = :userId ORDER BY p.createdAt DESC")
-    Page<Post> findByUserId(@Param("userId") Long userId, Pageable pageable);
+    List<Post> findByUserId(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(p) FROM Post p WHERE p.user.id = :userId ")
     long countByUserId(@Param("userId") Long userId);
