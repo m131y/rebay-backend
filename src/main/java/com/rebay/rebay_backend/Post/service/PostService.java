@@ -102,10 +102,10 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PostResponse> getUserPost(Long userId, Pageable pageable) {
+    public List<PostResponse> getUserPost(Long userId) {
         User currentUser = authenticationService.getCurrentUser();
-        Page<Post> posts = postRepository.findByUserId(userId, pageable);
-        return posts.map(post -> {
+        List<Post> posts = postRepository.findByUserId(userId);
+        return posts.stream().map(post -> {
             UserResponse userResponse = userService.mapToUserResponse(post.getUser());
             PostResponse response = PostResponse.fromEntity(post, userResponse);
             Long likeCount = likeRepository.countByPostId(post.getId());
@@ -114,7 +114,7 @@ public class PostService {
             response.setLiked(isLiked);
             response.setLikeCount(likeCount);
             return response;
-        });
+        }).toList();
     }
 
 

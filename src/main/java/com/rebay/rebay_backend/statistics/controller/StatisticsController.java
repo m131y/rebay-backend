@@ -2,6 +2,7 @@ package com.rebay.rebay_backend.statistics.controller;
 
 import com.rebay.rebay_backend.Post.dto.PostResponse;
 import com.rebay.rebay_backend.Post.service.PostService;
+import com.rebay.rebay_backend.auction.service.AuctionService;
 import com.rebay.rebay_backend.review.service.ReviewService;
 import com.rebay.rebay_backend.social.service.FollowService;
 import com.rebay.rebay_backend.statistics.dto.TradeHistory;
@@ -31,11 +32,14 @@ public class StatisticsController {
     private final FollowService followService;
     private final StatisticsService statisticsService;
     private final AuthenticationService authenticationService;
+    private final AuctionService auctionService;
 
     @GetMapping("/userProfile/{userId}")
     public ResponseEntity<Map<String,Long>> getStatisticsByUserProfile(@PathVariable Long userId) {
         Map<String,Long> counts = new HashMap<>();
+        counts.put("all", postService.getPostsCountByUser(userId) + auctionService.getAuctionsCountByUser(userId));
         counts.put("post", postService.getPostsCountByUser(userId));
+        counts.put("auction", auctionService.getAuctionsCountByUser(userId));
         counts.put("review", reviewService.getReviewsCountByUser(userId));
         counts.put("follower", followService.getFollowersCount(userId));
         counts.put("following", followService.getFollowingCount(userId));

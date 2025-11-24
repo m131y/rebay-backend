@@ -125,10 +125,10 @@ public class AuctionService {
     }
 
     @Transactional(readOnly = true)
-    public Page<AuctionResponse> getUserAuctions(Long userId, Pageable pageable) {
+    public List<AuctionResponse> getUserAuctions(Long userId) {
         User currentUser = authenticationService.getCurrentUser();
-        Page<Auction> auctions = auctionRepository.findBySellerId(userId, pageable);
-        return auctions.map(auction -> {
+        List<Auction> auctions = auctionRepository.findBySellerId(userId);
+        return auctions.stream().map(auction -> {
             UserResponse userResponse = userService.mapToUserResponse(auction.getSeller());
             AuctionResponse response = AuctionResponse.fromEntity(auction, userResponse);
             Long likeCount = likeRepository.countByAuctionId(auction.getId());
@@ -137,7 +137,7 @@ public class AuctionService {
             response.setLiked(isLiked);
             response.setLikeCount(likeCount);
             return response;
-        });
+        }).toList();
     }
 
     public AuctionResponse updateAuction(Long auctionId, AuctionRequest request) {

@@ -11,6 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/auction")
 @RequiredArgsConstructor
@@ -39,13 +41,10 @@ public class AuctionController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<AuctionResponse>> getUserAuctions(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+    public ResponseEntity<List<AuctionResponse>> getUserAuctions(
+            @PathVariable Long userId
     ) {
-        Pageable pageable = PageRequest.of(page, size);
-        return ResponseEntity.ok(auctionService.getUserAuctions(userId, pageable));
+        return ResponseEntity.ok(auctionService.getUserAuctions(userId));
     }
 
     @PutMapping("/{auctionId}")

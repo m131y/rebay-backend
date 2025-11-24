@@ -24,7 +24,8 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     @Query("update Auction a set a.viewCount = a.viewCount + 1 where a.id = :id")
     int updateView(@Param("id") Long id);
 
-    Page<Auction> findBySellerId(Long sellerId, Pageable pageable);
+    @Query("SELECT a FROM Auction a JOIN FETCH a.seller WHERE a.seller.id = :sellerId ORDER BY a.createdAt DESC")
+    List<Auction> findBySellerId(Long sellerId);
 
     long countBySellerId(@Param("userId") Long userId);
 }
