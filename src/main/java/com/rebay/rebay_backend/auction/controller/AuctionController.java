@@ -1,5 +1,6 @@
 package com.rebay.rebay_backend.auction.controller;
 
+import com.rebay.rebay_backend.auction.dto.AuctionCloseResponse;
 import com.rebay.rebay_backend.auction.dto.AuctionRequest;
 import com.rebay.rebay_backend.auction.dto.AuctionResponse;
 import com.rebay.rebay_backend.auction.service.AuctionService;
@@ -16,6 +17,7 @@ import com.rebay.rebay_backend.user.service.AuthenticationService;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.List;
 
@@ -87,6 +89,17 @@ public class AuctionController {
 
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/{auctionId}/close")
+    public ResponseEntity<AuctionCloseResponse> closeAuction(
+            @PathVariable Long auctionId,
+            @RequestBody Map<String, String> request
+    ) {
+        LocalDateTime parsedEndTime = LocalDateTime.parse(request.get("endTime"));
+        AuctionCloseResponse response = auctionService.closeAuction(auctionId, parsedEndTime);
+        return ResponseEntity.ok(response);
+    }
+
 
     // 실시간 경매 연결 (SSE Stream)
     @GetMapping(value = "/{auctionId}/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)

@@ -9,6 +9,7 @@ import com.rebay.rebay_backend.Post.exception.UnauthorizedException;
 import com.rebay.rebay_backend.Post.repository.CategoryRepository;
 import com.rebay.rebay_backend.Post.repository.HashTagRepository;
 import com.rebay.rebay_backend.Post.service.PostService;
+import com.rebay.rebay_backend.auction.dto.AuctionCloseResponse;
 import com.rebay.rebay_backend.auction.dto.AuctionRequest;
 import com.rebay.rebay_backend.auction.dto.AuctionResponse;
 import com.rebay.rebay_backend.auction.entity.Auction;
@@ -16,6 +17,11 @@ import com.rebay.rebay_backend.auction.repository.AuctionRepository;
 import com.rebay.rebay_backend.auction.repository.BidHistoryRepository;
 import com.rebay.rebay_backend.auction.entity.BidHistory;
 import com.rebay.rebay_backend.notification.SseService;
+import com.rebay.rebay_backend.payment.entity.AuctionStatus;
+import com.rebay.rebay_backend.payment.entity.Transaction;
+import com.rebay.rebay_backend.payment.entity.TransactionStatus;
+import com.rebay.rebay_backend.payment.entity.TransactionType;
+import com.rebay.rebay_backend.payment.repository.TransactionRepository;
 import com.rebay.rebay_backend.social.repository.LikeRepository;
 import com.rebay.rebay_backend.user.dto.UserResponse;
 import com.rebay.rebay_backend.user.entity.User;
@@ -26,6 +32,7 @@ import com.rebay.rebay_backend.user.service.UserService;
 import jakarta.persistence.*;
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.domain.Page;
@@ -41,6 +48,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuctionService {
     private final UserService userService;
     private final AuthenticationService authenticationService;
@@ -49,7 +57,7 @@ public class AuctionService {
     private final CategoryRepository categoryRepository;
     private final AuctionRepository auctionRepository;
     private final LikeRepository likeRepository;
-
+    private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final BidHistoryRepository bidHistoryRepository;
     private final SseService sseService;
@@ -122,7 +130,7 @@ public class AuctionService {
         Page<Auction> auctions = auctionRepository.findAllWithUser(pageable);
         return auctions.map(auction -> {
             UserResponse userResponse = userService.mapToUserResponse(auction.getSeller());
-            AuctionResponse response = AuctionResponse.fromEntity(auction,userResponse);
+            AuctionResponse response = AuctionResponse.fromEntity(auction, userResponse);
             Long likeCount = likeRepository.countByAuctionId(auction.getId());
             boolean isLiked = likeRepository.existsByUserAndAuction(currentUser, auction);
 
@@ -222,6 +230,32 @@ public class AuctionService {
         return auctionRepository.countBySellerId(userId);
     }
 
+    private Transaction findOrCreateBidTransaction(Auction auction, User bidder) {
+        Transaction transaction = transactionRepository
+                .findByAuctionAndBuyerAndAuctionStatus(auction, bidder, AuctionStatus.BIDDING)
+                .orElse(null);
+
+        if (transaction != null) {
+            log.info("[Auction] 기존 입찰 Transaction 재사용: transactionId={}", transaction.getId());
+            return transaction;
+        }
+
+        Transaction newTransaction = Transaction.builder()
+                .auction(auction)
+                .transactionType(TransactionType.AUCTION)
+                .auctionStatus(AuctionStatus.BIDDING)
+                .buyer(bidder)
+                .seller(auction.getSeller())
+                .status(TransactionStatus.PAYMENT_PENDING)
+                .isReceived(false)
+                .build();
+
+        transactionRepository.save(newTransaction);
+        log.info("[Auction] 새 입찰 Transaction 생성: transactionId={}", newTransaction.getId());
+
+        return newTransaction;
+    }
+
     // 입찰 메서드
     @Transactional
     public void placeBid(Long auctionId, BigDecimal bidAmount, Long bidderId) {
@@ -240,10 +274,14 @@ public class AuctionService {
             throw new IllegalArgumentException("현재 최고가보다 높은 금액을 제시해야 합니다.");
         }
 
-        // 입찰 내역 저장
+        // 입찰자 조회
         User bidder = userRepository.findById(bidderId)
                 .orElseThrow(() -> new ResourceNotFoundException("사용자를 찾을 수 없습니다."));
 
+        // 기존 입찰 Transaction 찾기 (입찰자별로 하나의 Transaction만 갖게)
+        Transaction transaction = findOrCreateBidTransaction(auction, bidder);
+
+        // 입찰 내역 저장
         BidHistory bidHistory = BidHistory.builder()
                 .auction(auction)
                 .bidder(bidder)
@@ -265,5 +303,106 @@ public class AuctionService {
         );
 
         sseService.broadcastToAuction(auctionId, updateData);
+    }
+
+    private AuctionCloseResponse handleNoWinner(Auction auction, User currentUser) {
+        log.info("[Auction] 입찰자 없음: auctionId={}", auction.getId());
+
+        auction.setStatus(SaleStatus.FAILED);
+        auctionRepository.save(auction);
+
+        boolean didBid = bidHistoryRepository.existsByAuctionAndBidder(auction, currentUser);
+        AuctionStatus currentUserStatus = didBid ? AuctionStatus.LOSE : AuctionStatus.BIDDING;
+
+        return AuctionCloseResponse.builder()
+                .auctionStatus(currentUserStatus)
+                .build();
+    }
+
+    private AuctionCloseResponse handleWinner(Auction auction, BidHistory winningBid, User currentUser) {
+        User winner = winningBid.getBidder();
+
+        // 낙찰자 Transaction 업데이트
+        Transaction winningTransaction = updateWinningTransaction(auction, winner);
+
+        // 낙찰 실패자들 Transaction 업데이트
+        updateLosingTransactions(auction, winningTransaction);
+
+        // 경매 상태 업데이트
+        auction.setStatus(SaleStatus.SOLD);
+        auctionRepository.save(auction);
+
+        // 현재 사용자의 상태 결정
+        AuctionStatus currentUserStatus = determineCurrentUserStatus(auction, winner, currentUser);
+
+        log.info("[Auction] 경매 종료: auctionId={}, winnerId={}, status={}",
+                auction.getId(), winner.getId(), currentUserStatus);
+
+        return AuctionCloseResponse.builder()
+                .auctionStatus(currentUserStatus)
+                .finalPrice(winningBid.getBidPrice())
+                .winnerId(winner.getId())
+                .winnerName(winner.getUsername())
+                .transactionId(winningTransaction.getId())
+                .build();
+    }
+
+    private Transaction updateWinningTransaction(Auction auction, User winner) {
+        Transaction transaction = transactionRepository
+                .findByAuctionAndBuyerAndAuctionStatus(auction, winner, AuctionStatus.BIDDING)
+                .orElseThrow(() -> new IllegalStateException("낙찰자의 거래 내역을 찾을 수 없습니다."));
+
+        transaction.updateAuctionStatus(AuctionStatus.WON);
+        transactionRepository.save(transaction);
+
+        log.info("[Auction] 낙찰자 Transaction 업데이트: transactionId={}", transaction.getId());
+
+        return transaction;
+    }
+
+    private void updateLosingTransactions(Auction auction, Transaction winningTransaction) {
+        List<Transaction> losingTransactions = transactionRepository
+                .findByAuctionAndAuctionStatus(auction, AuctionStatus.BIDDING);
+
+        losingTransactions.forEach(t -> {
+            if (!t.getId().equals(winningTransaction.getId())) {
+                t.updateAuctionStatus(AuctionStatus.LOSE);
+                log.info("[Auction] 낙찰 실패 처리: transactionId={}, bidderId={}",
+                        t.getId(), t.getBuyer().getId());
+            }
+        });
+    }
+
+    private AuctionStatus determineCurrentUserStatus(Auction auction, User winner, User currentUser) {
+        if (winner.getId().equals(currentUser.getId())) {
+            return AuctionStatus.WON;
+        }
+
+        boolean didBid = bidHistoryRepository.existsByAuctionAndBidder(auction, currentUser);
+        return didBid ? AuctionStatus.LOSE : AuctionStatus.BIDDING;
+    }
+
+    @Transactional
+    public AuctionCloseResponse closeAuction(Long auctionId, LocalDateTime endTime) {
+        User currentUser = authenticationService.getCurrentUser();
+
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new ResourceNotFoundException("경매를 찾을 수 없습니다."));
+
+        // 프론트에서 보낸 endTime과 실제 경매 종료 시간 검증
+        if (endTime.isBefore(auction.getEndTime())) {
+            throw new IllegalStateException("경매가 아직 종료되지 않았습니다.");
+        }
+
+        // 최고가 입찰자 찾기
+        BidHistory winningBid = bidHistoryRepository
+                .findFirstByAuctionOrderByBidPriceDesc(auction)
+                .orElse(null);
+
+        if (winningBid == null) {
+            return handleNoWinner(auction, currentUser);
+        }
+
+        return handleWinner(auction, winningBid, currentUser);
     }
 }
