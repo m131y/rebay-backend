@@ -67,4 +67,9 @@ public class ReviewController {
         Pageable pageable = PageRequest.of(page, size);
         return ResponseEntity.ok(reviewService.getSellerReviews(sellerId, pageable));
     }
+
+    @GetMapping("/{transactionId}/check")
+    public ResponseEntity<Boolean> existsReviewByTransactionId( @PathVariable Long transactionId) {
+        return ResponseEntity.ok(reviewService.existsReviewByTransactionId(transactionId));
+    }
 }
