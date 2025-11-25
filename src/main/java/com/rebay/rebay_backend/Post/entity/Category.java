@@ -32,12 +32,10 @@ public class Category {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
-    @EqualsAndHashCode.Exclude // 지연 로딩 필드 제외
     private Category parent;
 
     @JsonIgnore
     @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY)
-    @EqualsAndHashCode.Exclude // 지연 로딩 필드 제외
     private Set<Category> children;
 
 }
