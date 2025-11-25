@@ -77,11 +77,11 @@ public class StatisticsService {
         System.out.println(auctionData);
 
         List<PostResponse> posts = postData.stream()
-                .map(post -> PostResponse.fromEntity(post, userService.mapToUserResponse(post.getUser())))
+                .map(post -> PostResponse.fromEntity(post, UserResponse.builder().build()))
                 .toList();
 
         List<AuctionResponse> auctions = auctionData.stream()
-                .map(auction -> AuctionResponse.fromEntity(auction, userService.mapToUserResponse(auction.getSeller())))
+                .map(auction -> AuctionResponse.fromEntity(auction, UserResponse.builder().build()))
                 .toList();
 
         List<IntegratedProductResponse> allIntegratedProducts = new ArrayList<>();
@@ -164,7 +164,7 @@ public class StatisticsService {
 
             double score = W_LIKE * sLike + W_SEARCH * sSearch;
 
-            System.out.println(response.getProductData().getId() + " : score("+score+") = sLike(" +sLike+") + sSearch("+sSearch+")");
+//            System.out.println(response.getProductData().getId() + " : score("+score+") = sLike(" +sLike+") + sSearch("+sSearch+")");
 
             if (score > 0) {
                 scoredPosts.add(new RecommendedPostDto(response, score));
