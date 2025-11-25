@@ -71,22 +71,22 @@ public interface IntegratedProductViewRepository extends JpaRepository<Integrate
 
     List<IntegratedProductView> findBySellerIdOrderByCreatedAtDesc(Long sellerId);
 
-    @Query("""
-      SELECT ipf 
-      FROM IntegratedProductView ipf
-      WHERE ipf.status = SaleStatus.ON_SALE
-      AND LOWER(ipf.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    """)
-    List<IntegratedProductView> findByTitleContains(@Param("keyword") String keyword);
-
-    @Query("""
-      SELECT ipf
-      FROM IntegratedProductView ipf
-      join ipf.seller u
-      WHERE ipf.status = SaleStatus.ON_SALE
-      AND LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    """)
-    List<IntegratedProductView> findByUsernameContains(@Param("keyword") String keyword);
+//    @Query("""
+//      SELECT ipf
+//      FROM IntegratedProductView ipf
+//      WHERE ipf.status = SaleStatus.ON_SALE
+//      AND LOWER(ipf.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+//    """)
+//    List<IntegratedProductView> findByTitleContains(@Param("keyword") String keyword);
+//
+//    @Query("""
+//      SELECT ipf
+//      FROM IntegratedProductView ipf
+//      join ipf.seller u
+//      WHERE ipf.status = SaleStatus.ON_SALE
+//      AND LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
+//    """)
+//    List<IntegratedProductView> findByUsernameContains(@Param("keyword") String keyword);
 
 //    //입력한 tag만 검색
 //    @EntityGraph(attributePaths = {"user", "hashtags"})
@@ -99,22 +99,22 @@ public interface IntegratedProductViewRepository extends JpaRepository<Integrate
 //    """)
 //    List<IntegratedProductView> findByHashtagExact(@Param("name") String name);
 
-    @Query("""
-    SELECT DISTINCT ipf.title
-    FROM IntegratedProductView ipf
-    WHERE LOWER(ipf.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    ORDER BY ipf.title ASC
-    """)
-    Page<String> suggestTitle(@Param("keyword") String keyword, Pageable pageable);
-
-    @Query("""
-    SELECT DISTINCT u.username
-    FROM IntegratedProductView ipf
-    JOIN ipf.seller u
-    WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    ORDER BY u.username ASC
-    """)
-    Page<String> suggestUsername(@Param("keyword") String keyword, Pageable pageable);
+//    @Query("""
+//    SELECT DISTINCT ipf.title
+//    FROM IntegratedProductView ipf
+//    WHERE LOWER(ipf.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+//    ORDER BY ipf.title ASC
+//    """)
+//    Page<String> suggestTitle(@Param("keyword") String keyword, Pageable pageable);
+//
+//    @Query("""
+//    SELECT DISTINCT u.username
+//    FROM IntegratedProductView ipf
+//    JOIN ipf.seller u
+//    WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
+//    ORDER BY u.username ASC
+//    """)
+//    Page<String> suggestUsername(@Param("keyword") String keyword, Pageable pageable);
 
 //    @Query("""
 //    SELECT DISTINCT h.name

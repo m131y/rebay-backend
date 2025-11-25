@@ -8,10 +8,7 @@ import com.rebay.rebay_backend.auction.entity.Auction;
 import com.rebay.rebay_backend.auction.repository.AuctionRepository;
 import com.rebay.rebay_backend.integratedProduct.dto.IntegratedProductResponse;
 import com.rebay.rebay_backend.integratedProduct.dto.ProductFeedItem;
-import com.rebay.rebay_backend.integratedProduct.entity.IntegratedProductView;
 import com.rebay.rebay_backend.integratedProduct.repository.IntegratedProductRepository;
-import com.rebay.rebay_backend.integratedProduct.repository.IntegratedProductViewRepository;
-import com.rebay.rebay_backend.integratedProduct.service.IntegratedProductService;
 import com.rebay.rebay_backend.search.entity.Search;
 import com.rebay.rebay_backend.search.entity.SearchTarget;
 import com.rebay.rebay_backend.search.repository.SearchRepository;
@@ -39,9 +36,7 @@ public class SearchService {
     private final PostRepository postRepository;
     private final SearchRepository searchRepository;
     private final AuctionRepository auctionRepository;
-    private final IntegratedProductViewRepository integratedProductViewRepository;
     private final IntegratedProductRepository integratedProductRepository;
-    private final IntegratedProductService integratedProductService;
     private final AuthenticationService authenticationService;
     private final UserService userService;
 
@@ -60,12 +55,16 @@ public class SearchService {
 
         switch (target) {
             case TITLE:
-                List<IntegratedProductView> titleProductList = integratedProductViewRepository.findByTitleContains(kw);
-                return titleProductList.stream().map(product -> integratedProductService.mapViewToProductFeedItem(product)).toList();
+                List<Post> postTitleData = postRepository.findByTitleContains(kw);
+                List<Auction> auctionTitleData = auctionRepository.findByTitleContains(kw);
+                List<IntegratedProductResponse> titleProductList = integratedProductRepository.fromDataToIntegratedProduct(postTitleData, auctionTitleData);
+                return integratedProductRepository.fromIntegratedProductToFeedItem(titleProductList);
 
             case USERNAME:
-                List<IntegratedProductView> usernameProductList = integratedProductViewRepository.findByUsernameContains(kw);
-                return usernameProductList.stream().map(product -> integratedProductService.mapViewToProductFeedItem(product)).toList();
+                List<Post> postUsernameData = postRepository.findByUsernameContains(kw);
+                List<Auction> auctionUsernameData = auctionRepository.findByUsernameContains(kw);
+                List<IntegratedProductResponse> usernameProductList = integratedProductRepository.fromDataToIntegratedProduct(postUsernameData, auctionUsernameData);
+                return integratedProductRepository.fromIntegratedProductToFeedItem(usernameProductList);
 
             case HASHTAG:
                 List<Post> postHashtagData = postRepository.findByHashtagExact(kw);
