@@ -69,7 +69,6 @@ public class StatisticsService {
 
         List<IntegratedProductView> viewList = likeRepository.findTopLikedProductsLastWeek(oneWeekAgo);
 
-        System.out.println(viewList);
         List<ProductFeedItem> userProducts = viewList.stream()
                 .sorted(Comparator.comparing(IntegratedProductView::getCreatedAt).reversed())
                 .map( view -> integratedProductService.mapViewToProductFeedItem(view))
@@ -95,7 +94,6 @@ public class StatisticsService {
 
         BigDecimal totalSales;
         Object sumResult = result[0];
-        log.info("sumResult: ",sumResult);
 
         if (sumResult == null) {
             totalSales = BigDecimal.ZERO;
@@ -181,7 +179,6 @@ public class StatisticsService {
                 aggregatedScores.merge(id, likeCount, Long::sum);
             }
         }
-        System.out.println(aggregatedScores);
         return aggregatedScores;
     }
 

@@ -77,7 +77,7 @@ public class S3Service {
             // S3에 파일 업로드
             s3Client.putObject(putObjectRequest);
 
-            log.info("Successfully uploaded file to S3: {}", fileName);
+//            log.info("Successfully uploaded file to S3: {}", fileName);
 
             return fileName;
         } catch (IOException e) {
@@ -248,7 +248,7 @@ public class S3Service {
 
             s3Client.putObject(putObjectRequest);
 
-            log.info("Successfully uploaded byte image to S3: {}", fileName);
+//            log.info("Successfully uploaded byte image to S3: {}", fileName);
 
             return fileName;
 
