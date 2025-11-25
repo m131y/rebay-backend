@@ -13,6 +13,8 @@ import com.rebay.rebay_backend.auction.repository.AuctionRepository;
 import com.rebay.rebay_backend.auction.service.AuctionService;
 import com.rebay.rebay_backend.integratedProduct.dto.IntegratedProductResponse;
 import com.rebay.rebay_backend.integratedProduct.dto.ProductFeedItem;
+import com.rebay.rebay_backend.integratedProduct.entity.IntegratedProductView;
+import com.rebay.rebay_backend.integratedProduct.service.IntegratedProductService;
 import com.rebay.rebay_backend.payment.entity.Transaction;
 import com.rebay.rebay_backend.payment.entity.TransactionStatus;
 import com.rebay.rebay_backend.payment.repository.PaymentRepository;
@@ -60,37 +62,17 @@ public class StatisticsService {
     private final AuctionService auctionService;
     private final UserService userService;
     private final AuthenticationService authenticationService;
-
-
-    public List<PostResponse> getTopLikedPostLastWeek() {
-        LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);
-        List<Post> posts = likeRepository.findTopLikedPostsLastWeek(oneWeekAgo);
-        return posts.stream().map(post -> PostResponse.fromEntity(post, UserResponse.builder().build())).toList();
-    }
+    private final IntegratedProductService integratedProductService;
 
     public List<ProductFeedItem> getTopLikedProductsLastWeek() {
         LocalDateTime oneWeekAgo = LocalDateTime.now().minusWeeks(1);
-        List<Post> postData = likeRepository.findTopLikedPostsLastWeek(oneWeekAgo);
-        List<Auction> auctionData = likeRepository.findTopLikedAuctionsLastWeek(oneWeekAgo);
 
-        System.out.println(postData);
-        System.out.println(auctionData);
+        List<IntegratedProductView> viewList = likeRepository.findTopLikedProductsLastWeek(oneWeekAgo);
 
-        List<PostResponse> posts = postData.stream()
-                .map(post -> PostResponse.fromEntity(post, userService.mapToUserResponse(post.getUser())))
-                .toList();
-
-        List<AuctionResponse> auctions = auctionData.stream()
-                .map(auction -> AuctionResponse.fromEntity(auction, userService.mapToUserResponse(auction.getSeller())))
-                .toList();
-
-        List<IntegratedProductResponse> allIntegratedProducts = new ArrayList<>();
-        posts.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
-        auctions.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
-
-        List<ProductFeedItem> userProducts = allIntegratedProducts.stream()
-                .sorted(Comparator.comparing(IntegratedProductResponse::getCreatedAt).reversed())
-                .map(IntegratedProductResponse::toProductFeedItem)
+        System.out.println(viewList);
+        List<ProductFeedItem> userProducts = viewList.stream()
+                .sorted(Comparator.comparing(IntegratedProductView::getCreatedAt).reversed())
+                .map( view -> integratedProductService.mapViewToProductFeedItem(view))
                 .collect(Collectors.toList());
 
         return userProducts;
@@ -164,7 +146,7 @@ public class StatisticsService {
 
             double score = W_LIKE * sLike + W_SEARCH * sSearch;
 
-            System.out.println(response.getProductData().getId() + " : score("+score+") = sLike(" +sLike+") + sSearch("+sSearch+")");
+//            System.out.println(response.getProductData().getId() + " : score("+score+") = sLike(" +sLike+") + sSearch("+sSearch+")");
 
             if (score > 0) {
                 scoredPosts.add(new RecommendedPostDto(response, score));
