@@ -1,6 +1,7 @@
 package com.rebay.rebay_backend.statistics.dto;
 
 import com.rebay.rebay_backend.Post.dto.PostResponse;
+import com.rebay.rebay_backend.integratedProduct.dto.IntegratedProductResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,6 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class RecommendedPostDto {
-    private PostResponse post;
+    private IntegratedProductResponse product;
     private double score;
 }

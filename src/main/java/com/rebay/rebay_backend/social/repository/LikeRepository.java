@@ -2,6 +2,7 @@ package com.rebay.rebay_backend.social.repository;
 
 import com.rebay.rebay_backend.Post.entity.Post;
 import com.rebay.rebay_backend.auction.entity.Auction;
+import com.rebay.rebay_backend.integratedProduct.entity.IntegratedProductView;
 import com.rebay.rebay_backend.social.entity.Like;
 import com.rebay.rebay_backend.user.entity.User;
 import org.springframework.data.domain.Page;
@@ -30,23 +31,30 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
 
     void deleteByUserAndPost(User user, Post post);
 
-    // 일주일 내 좋아요가 가장 많은 Post들을 좋아요 수 기준 내림차순으로 페이지 조회
+    void deleteByUserAndAuction(User user, Auction auction);
+
+    // 일주일 내 좋아요가 가장 많은 상품들을 좋아요 수 기준 내림차순으로 페이지 조회
     @Query(
-            value = "SELECT p.* " +
-                    "FROM posts p " +
-                    "INNER JOIN (" +
-                    "    SELECT l.post_id, COUNT(l.post_id) as like_count " +
+            value = "SELECT ipf.* " +
+                    "FROM integrated_product_feed ipf " +
+                    "INNER JOIN ( " +
+                    "    SELECT l.post_id AS product_id, 'POST' AS product_type, COUNT(l.post_id) AS like_count " +
                     "    FROM likes l " +
-                    "    WHERE l.created_at >= :oneWeekAgo " +
+                    "    WHERE l.post_id IS NOT NULL AND l.created_at >= :oneWeekAgo " +
                     "    GROUP BY l.post_id " +
+                    "    UNION ALL " +
+                    "    SELECT l.auction_id AS product_id, 'AUCTION' AS product_type, COUNT(l.auction_id) AS like_count " +
+                    "    FROM likes l " +
+                    "    WHERE l.auction_id IS NOT NULL AND l.created_at >= :oneWeekAgo " +
+                    "    GROUP BY l.auction_id " +
                     ") AS weekly_likes " +
-                    "ON p.id = weekly_likes.post_id " +
-                    "WHERE p.status = 'ON_SALE' " +
-                    "ORDER BY weekly_likes.like_count DESC " +
+                    "ON ipf.product_id = weekly_likes.product_id AND ipf.product_type = weekly_likes.product_type " +
+                    "WHERE ipf.status = 'ON_SALE' " +
+                    "ORDER BY weekly_likes.like_count DESC, ipf.created_at DESC " +
                     "LIMIT 10",
             nativeQuery = true
     )
-    List<Post> findTopLikedPostsLastWeek(@Param("oneWeekAgo") LocalDateTime oneWeekAgo);
+    List<IntegratedProductView> findTopLikedProductsLastWeek(@Param("oneWeekAgo") LocalDateTime oneWeekAgo);
 
     // 특정 유저가 좋아요를 누른 게시글들의 카테고리별 카운트와 Post ID를 조회
     @Query(

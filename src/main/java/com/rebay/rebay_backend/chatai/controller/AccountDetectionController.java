@@ -3,7 +3,6 @@ package com.rebay.rebay_backend.chatai.controller;
 import com.rebay.rebay_backend.chatai.dto.AccountCheckRequest;
 import com.rebay.rebay_backend.chatai.dto.AccountCheckResponse;
 import com.rebay.rebay_backend.chatai.service.AccountDetectionService;
-import com.rebay.rebay_backend.chatai.service.OpenAiClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
