@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 @Builder
 public class ProductFeedItem {
     private Long productId;
+    private ProductType productType;
     private String title;
     private String content;
     private int categoryCode;
@@ -22,6 +23,5 @@ public class ProductFeedItem {
     private BigDecimal currentPrice;
     private String thumbnailImageUrl;
     private SaleStatus status;
-    private ProductType productType;
     private LocalDateTime createdAt;
 }
