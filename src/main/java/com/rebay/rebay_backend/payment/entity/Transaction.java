@@ -27,11 +27,15 @@ public class Transaction {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
+    @JoinColumn(name = "product_id")
     private Post post;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "auction_id")
+    private Auction auction;
+
     @Enumerated(EnumType.STRING)
-    private TransactionType transactionType;  // DEFAULT or AUCTION
+    private TransactionType transactionType; // DEFAULT or AUCTION
 
     @Enumerated(EnumType.STRING)
     private AuctionStatus auctionStatus;      // BIDDING / WON / LOSE
@@ -63,6 +67,14 @@ public class Transaction {
     @OneToOne(mappedBy = "transaction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Review review;
 
+    // 헬퍼 메서드 추가..
+    public String getItemTitle() {
+        if (transactionType == TransactionType.AUCTION && auction != null) {
+            return auction.getTitle();
+        }
+        return post != null ? post.getTitle() : null;
+    }
+
     public void confirmReceipt() {
         this.isReceived = true;
         this.receivedAt = LocalDateTime.now();
@@ -72,6 +84,10 @@ public class Transaction {
     public boolean isExpired() {
         LocalDateTime expireAt = this.getCreatedAt().plusMinutes(10);
         return LocalDateTime.now().isAfter(expireAt);
+    }
+
+    public void updateAuctionStatus(AuctionStatus newStatus) {
+        this.auctionStatus = newStatus;
     }
 
     public void readyPayment() {
