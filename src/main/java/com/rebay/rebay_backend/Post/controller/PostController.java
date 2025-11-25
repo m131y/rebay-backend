@@ -42,7 +42,10 @@ public class PostController {
 
     @GetMapping("/{postId}")
     public ResponseEntity<PostResponse> getPost(@PathVariable Long postId) {
-        return ResponseEntity.ok(postService.updateViewcount(postId));
+        PostResponse response = postService.updateViewcount(postId);
+        response.setLikeCount(likeService.getLikeCount(postId));
+        response.setLiked(likeService.isLikedByCurrentUser(postId));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{userId}")
@@ -78,5 +81,15 @@ public class PostController {
                 "isLiked", isLiked,
                 "likeCount", likeCount)
         );
+    }
+
+    @GetMapping("{postId}/like")
+    public Long getPostLikeCount(@PathVariable Long postId) {
+        return likeService.getLikeCount(postId);
+    }
+
+    @GetMapping("{auctionId}/likeCount")
+    public boolean isLikedPostByCurrentUser(@PathVariable Long postId) {
+        return likeService.isLikedByCurrentUser(postId);
     }
 }

@@ -3,12 +3,17 @@ package com.rebay.rebay_backend.auction.controller;
 import com.rebay.rebay_backend.auction.dto.AuctionRequest;
 import com.rebay.rebay_backend.auction.dto.AuctionResponse;
 import com.rebay.rebay_backend.auction.service.AuctionService;
+import com.rebay.rebay_backend.social.entity.Like;
+import com.rebay.rebay_backend.social.service.LikeService;
+import com.rebay.rebay_backend.user.entity.User;
+import com.rebay.rebay_backend.user.exception.BadRequestException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import com.rebay.rebay_backend.user.entity.User;
@@ -18,12 +23,14 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.math.BigDecimal;
 import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auction")
 @RequiredArgsConstructor
 public class AuctionController {
     private final AuctionService auctionService;
+    private final LikeService likeService;
 
     private final AuthenticationService authenticationService;
     private final com.rebay.rebay_backend.notification.SseService sseService;
@@ -70,6 +77,26 @@ public class AuctionController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("{auctionId}/like")
+    public ResponseEntity<?> toggleAuctionLike(@PathVariable Long auctionId) {
+        boolean isLiked = likeService.toggleAuctionLike(auctionId);
+        Long likeCount = likeService.getAuctionLikeCount(auctionId);
+
+        return ResponseEntity.ok().body(Map.of(
+                "isLiked", isLiked,
+                "likeCount", likeCount)
+        );
+    }
+
+    @GetMapping("{auctionId}/like")
+    public Long getAuctionLikeCount(@PathVariable Long auctionId) {
+        return likeService.getAuctionLikeCount(auctionId);
+    }
+
+    @GetMapping("{auctionId}/likeCount")
+    public boolean isLikedAuctionByCurrentUser(@PathVariable Long auctionId) {
+        return likeService.isLikedAuctionByCurrentUser(auctionId);
+    }
     // 입찰
     @PostMapping("/{auctionId}/bid")
     public ResponseEntity<Void> placeBid(

@@ -26,12 +26,6 @@ public class IntegratedProductService {
             Boolean excludeSold,
             ProductType productType
     ) {
-        System.out.println(page);
-        System.out.println(size);
-        System.out.println(categoryCode);
-        System.out.println(excludeSold);
-        System.out.println(sort);
-        System.out.println(productType);
         return integratedProductRepository.findIntegratedProducts(
                 page, size, categoryCode, sort, excludeSold, productType
         );

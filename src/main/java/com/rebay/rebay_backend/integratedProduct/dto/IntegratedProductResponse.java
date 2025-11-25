@@ -1,16 +1,16 @@
 package com.rebay.rebay_backend.integratedProduct.dto;
 
 import com.rebay.rebay_backend.Post.dto.PostResponse;
-import com.rebay.rebay_backend.Post.entity.SaleStatus;
 import com.rebay.rebay_backend.auction.dto.AuctionResponse;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
+@AllArgsConstructor
 public class IntegratedProductResponse {
 
     private ProductType productType;
@@ -29,6 +29,13 @@ public class IntegratedProductResponse {
         integrated.productType = ProductType.AUCTION;
         integrated.productData = response;
         return integrated;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        // productData는 ProductCommonResponse 타입이지만,
+        // 실제로는 PostResponse나 AuctionResponse이므로
+        // 이 객체들에 getCreatedAt()이 있다고 가정하고 호출합니다.
+        return this.productData.getCreatedAt();
     }
 
     public ProductFeedItem toProductFeedItem() {
