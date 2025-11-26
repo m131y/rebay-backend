@@ -1,5 +1,6 @@
 package com.rebay.rebay_backend.user.security;
 
+import com.rebay.rebay_backend.S3.service.S3Service;
 import com.rebay.rebay_backend.user.entity.User;
 import com.rebay.rebay_backend.user.repository.UserRepository;
 import jakarta.servlet.ServletException;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     private final UserRepository userRepository;
     private final JwtService jwtService;
+    private final S3Service s3Service;
 
     @Value("${frontend.url}")
     private String frontendUrl;
@@ -43,9 +45,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             avatarUrl = oAuth2User.getAttribute("avatar_url");
         }
 
+        byte[] imageBytes = s3Service.downloadImageFromUrl(avatarUrl);
+
         final String finalEmail = email;
         final String finalName = name != null ? name : "User";
-        final String finalAvatarUrl = avatarUrl;
+        final String finalAvatarUrl = s3Service.uploadImageBytes(imageBytes, "ssh/profile");
 
         User user = userRepository.findByEmail(finalEmail)
                 .orElseGet(() -> {

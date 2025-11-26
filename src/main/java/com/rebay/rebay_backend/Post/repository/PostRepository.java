@@ -13,12 +13,14 @@ import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-
     @Query("SELECT p FROM Post p JOIN FETCH p.user ORDER BY p.createdAt DESC")
     Page<Post> findAllWithUser(Pageable pageable);
 
+    @Query("SELECT p FROM Post p JOIN FETCH p.user ORDER BY p.createdAt DESC")
+    List<Post> findAllWithUser();
+
     @Query("SELECT p FROM Post p JOIN FETCH p.user WHERE p.user.id = :userId ORDER BY p.createdAt DESC")
-    Page<Post> findByUserId(@Param("userId") Long userId, Pageable pageable);
+    List<Post> findByUserId(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(p) FROM Post p WHERE p.user.id = :userId ")
     long countByUserId(@Param("userId") Long userId);
@@ -28,34 +30,38 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     @Query("update Post p set p.viewCount = p.viewCount + 1 where p.id = :id")
     int updateView(@Param("id") Long id);
 
+    // 이미 판매 완료되거나, 사용자가 작성한 게시글 제외하고 조회
+    @Query("SELECT p FROM Post p " +
+            "WHERE p.status <> 'SOLD' AND p.user.id <> :userId")
+    List<Post> findRecommendationCandidates(@Param("userId") Long userId);
 
     @Query("""
     SELECT p FROM Post p
-      WHERE LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      WHERE p.status = SaleStatus.ON_SALE
+      AND LOWER(p.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
   """)
-    Page<Post> findByTitleContains(@Param("keyword") String keyword, Pageable pageable);
+    List<Post> findByTitleContains(@Param("keyword") String keyword);
 
     @Query("""
       SELECT p
       FROM Post p
       join p.user u
-      where LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
+      WHERE p.status = SaleStatus.ON_SALE
+      AND LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
     """)
-    Page<Post> findByUsernameContains(@Param("keyword") String keyword, Pageable pageable);
+    List<Post> findByUsernameContains(@Param("keyword") String keyword);
 
     //입력한 tag만 검색
     @EntityGraph(attributePaths = {"user", "hashtags"})
     @Query("""
        SELECT p FROM Post p
        JOIN p.hashtags h
-       WHERE LOWER(h.name) = LOWER(:name)
+       WHERE p.status = SaleStatus.ON_SALE
+       AND LOWER(h.name) = LOWER(:name)
     """)
-    Page<Post> findByHashtagExact(@Param("name") String name, Pageable pageable);
+    List<Post> findByHashtagExact(@Param("name") String name);
 
-    // 이미 판매 완료되거나, 사용자가 작성한 게시글 제외하고 조회
-    @Query("SELECT p FROM Post p " +
-            "WHERE p.status <> 'SOLD' AND p.user.id <> :userId")
-    List<Post> findRecommendationCandidates(@Param("userId") Long userId);
+
 
     @Query("""
     SELECT DISTINCT p.title

@@ -1,6 +1,8 @@
 package com.rebay.rebay_backend.user.entity;
 
 import com.rebay.rebay_backend.Post.entity.Post;
+import com.rebay.rebay_backend.auction.entity.Auction;
+import com.rebay.rebay_backend.auction.entity.BidHistory;
 import com.rebay.rebay_backend.review.entity.Review;
 import com.rebay.rebay_backend.search.entity.Search;
 import com.rebay.rebay_backend.social.entity.Like;
@@ -72,6 +74,14 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<Post> posts = new HashSet<>();
+
+    @OneToMany(mappedBy = "seller", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<Auction> auctions = new HashSet<>();
+
+    @OneToMany(mappedBy = "bidder", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<BidHistory> bidHistories = new HashSet<>();
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
     @Builder.Default

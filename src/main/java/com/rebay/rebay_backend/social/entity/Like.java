@@ -1,6 +1,7 @@
 package com.rebay.rebay_backend.social.entity;
 
 import com.rebay.rebay_backend.Post.entity.Post;
+import com.rebay.rebay_backend.auction.entity.Auction;
 import com.rebay.rebay_backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -35,8 +36,12 @@ public class Like {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id", nullable = false)
+    @JoinColumn(name = "post_id")
     private Post post;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "auction_id")
+    private Auction auction;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

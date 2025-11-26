@@ -70,6 +70,8 @@ jobs:
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
             TOSS_CLIENT_KEY=${{ secrets.TOSS_CLIENT_KEY }}
             TOSS_SECRET_KEY=${{ secrets.TOSS_SECRET_KEY }}
+            OPENAI_API_KEY_CHAT=${{ secrets.OPENAI_API_KEY_CHAT }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
             EOL
             echo "🔧 docker-compose.prod.yml 업데이트"
             cat > docker-compose.prod.yml <<'EODOC'
@@ -95,6 +97,8 @@ jobs:
                   - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
                   - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
                   - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+                  - OPENAI_API_KEY_CHAT=${OPENAI_API_KEY_CHAT}
+                  - OPENAI_API_KEY=${OPENAI_API_KEY}
                   - JWT_SECRET=${JWT_SECRET}
                   # 🚨 [JWT FIX] 환경 변수 강제 주입
                   - JWT_EXPIRATION=86400000 

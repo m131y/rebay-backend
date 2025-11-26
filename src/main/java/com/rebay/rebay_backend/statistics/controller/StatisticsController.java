@@ -2,6 +2,8 @@ package com.rebay.rebay_backend.statistics.controller;
 
 import com.rebay.rebay_backend.Post.dto.PostResponse;
 import com.rebay.rebay_backend.Post.service.PostService;
+import com.rebay.rebay_backend.auction.service.AuctionService;
+import com.rebay.rebay_backend.integratedProduct.dto.ProductFeedItem;
 import com.rebay.rebay_backend.review.service.ReviewService;
 import com.rebay.rebay_backend.social.service.FollowService;
 import com.rebay.rebay_backend.statistics.dto.TradeHistory;
@@ -31,11 +33,14 @@ public class StatisticsController {
     private final FollowService followService;
     private final StatisticsService statisticsService;
     private final AuthenticationService authenticationService;
+    private final AuctionService auctionService;
 
     @GetMapping("/userProfile/{userId}")
     public ResponseEntity<Map<String,Long>> getStatisticsByUserProfile(@PathVariable Long userId) {
         Map<String,Long> counts = new HashMap<>();
+        counts.put("all", postService.getPostsCountByUser(userId) + auctionService.getAuctionsCountByUser(userId));
         counts.put("post", postService.getPostsCountByUser(userId));
+        counts.put("auction", auctionService.getAuctionsCountByUser(userId));
         counts.put("review", reviewService.getReviewsCountByUser(userId));
         counts.put("follower", followService.getFollowersCount(userId));
         counts.put("following", followService.getFollowingCount(userId));
@@ -44,7 +49,7 @@ public class StatisticsController {
 
     // 좋아요 기준 일주일 간 인기상품
     @GetMapping("/popular")
-    public ResponseEntity<List<PostResponse>> getTopLikedProductsLastWeek() {
+    public ResponseEntity<List<ProductFeedItem>> getTopLikedProductsLastWeek() {
         return ResponseEntity.ok(statisticsService.getTopLikedProductsLastWeek());
     }
 
@@ -62,7 +67,7 @@ public class StatisticsController {
 
     // 사용자 검색어 기록 + 좋아요 기록 기반 게시글 추천 알고리즘
     @GetMapping("/personalRecommend")
-    public ResponseEntity<List<PostResponse>> getPersonalizedRecommendations() {
+    public ResponseEntity<List<ProductFeedItem>> getPersonalizedRecommendations() {
         return ResponseEntity.ok(statisticsService.getPersonalizedRecommendations());
     }
 

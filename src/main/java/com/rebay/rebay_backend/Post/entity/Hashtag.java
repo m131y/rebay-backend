@@ -1,6 +1,7 @@
 package com.rebay.rebay_backend.Post.entity;
 
 
+import com.rebay.rebay_backend.auction.entity.Auction;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.stereotype.Service;
@@ -27,4 +28,8 @@ public class Hashtag {
     @ManyToMany(mappedBy = "hashtags")
     @Builder.Default
     private Set<Post> posts = new HashSet<>();
+
+    @ManyToMany(mappedBy = "hashtags")
+    @Builder.Default
+    private Set<Auction> auctions = new HashSet<>();
 }

@@ -130,6 +130,4 @@ public class UserService {
                 .isFollowing(isFollowing)
                 .build();
     }
-
-
 }

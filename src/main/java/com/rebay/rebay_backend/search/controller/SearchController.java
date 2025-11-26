@@ -1,9 +1,8 @@
 package com.rebay.rebay_backend.search.controller;
 
-import com.rebay.rebay_backend.Post.dto.PostResponse;
+import com.rebay.rebay_backend.integratedProduct.dto.ProductFeedItem;
 import com.rebay.rebay_backend.search.entity.SearchTarget;
 import com.rebay.rebay_backend.search.service.SearchService;
-import com.rebay.rebay_backend.user.dto.UserResponse;
 import com.rebay.rebay_backend.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,14 +28,12 @@ public class SearchController {
 
 
     @GetMapping("/posts")
-    public Page<PostResponse> searchPosts(
+    public  List<ProductFeedItem> searchPosts(
             @RequestParam String keyword,
             @RequestParam SearchTarget target,
             @PageableDefault(size = 10, sort = "id", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return searchService.searchPost(keyword, target, pageable)
-                .map(post -> { UserResponse userResponse = userService.mapToUserResponse(post.getUser());
-                    return PostResponse.from(post, userResponse);});
+        return searchService.searchPost(keyword, target);
     }
 
     @GetMapping("/history")

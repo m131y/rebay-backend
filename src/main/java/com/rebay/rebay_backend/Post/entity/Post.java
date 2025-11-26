@@ -10,11 +10,16 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "posts")
+@Table(name = "posts", indexes = {
+        @Index(name = "idx_post_user_id", columnList = "user_id"),
+        @Index(name = "idx_post_status", columnList = "status")
+})
 @Getter
 @Setter
 @Builder
@@ -41,6 +46,17 @@ public class Post {
 
     @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
+
+    /** 🔹 다중 이미지(첫 번째가 대표) */
+    @ElementCollection
+    @CollectionTable(
+            name = "post_images",
+            joinColumns = @JoinColumn(name = "post_id")
+    )
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    @OrderColumn(name = "sort_order")
+    @Builder.Default
+    private List<String> imageUrls = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_code", referencedColumnName = "code", nullable = false)
@@ -102,4 +118,5 @@ public class Post {
         }
         return false;
     }
+
 }

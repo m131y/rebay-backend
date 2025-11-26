@@ -9,4 +9,5 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     Page<Review> findAllByTransactionSellerIdOrderByCreatedAt(Long sellerId, Pageable pageable);
     Page<Review> findAllByReviewerIdOrderByCreatedAt(Long reviewerId, Pageable pageable);
     long countByTransactionSellerId(Long sellerId);
+    boolean existsByTransactionId(Long transactionId);
 }

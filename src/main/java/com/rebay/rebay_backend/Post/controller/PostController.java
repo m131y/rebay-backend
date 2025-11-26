@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -41,17 +42,17 @@ public class PostController {
 
     @GetMapping("/{postId}")
     public ResponseEntity<PostResponse> getPost(@PathVariable Long postId) {
-        return ResponseEntity.ok(postService.updateViewcount(postId));
+        PostResponse response = postService.updateViewcount(postId);
+        response.setLikeCount(likeService.getLikeCount(postId));
+        response.setLiked(likeService.isLikedByCurrentUser(postId));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<Page<PostResponse>> getUserPosts(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+    public ResponseEntity<List<PostResponse>> getUserPosts(
+            @PathVariable Long userId
     ) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<PostResponse> posts = postService.getUserPost(userId, pageable);
+        List<PostResponse> posts = postService.getUserPost(userId);
         return ResponseEntity.ok(posts);
     }
 
@@ -80,5 +81,15 @@ public class PostController {
                 "isLiked", isLiked,
                 "likeCount", likeCount)
         );
+    }
+
+    @GetMapping("{postId}/like")
+    public Long getPostLikeCount(@PathVariable Long postId) {
+        return likeService.getLikeCount(postId);
+    }
+
+    @GetMapping("{auctionId}/likeCount")
+    public boolean isLikedPostByCurrentUser(@PathVariable Long postId) {
+        return likeService.isLikedByCurrentUser(postId);
     }
 }
