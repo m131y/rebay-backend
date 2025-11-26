@@ -20,7 +20,10 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Table(name = "auctions")
+@Table(name = "auctions", indexes = {
+        @Index(name = "idx_auction_seller_id", columnList = "seller_id"),
+        @Index(name = "idx_auction_status", columnList = "status")
+})
 @Builder
 @Getter
 @Setter

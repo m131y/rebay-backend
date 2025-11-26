@@ -14,6 +14,7 @@ import com.rebay.rebay_backend.auction.service.AuctionService;
 import com.rebay.rebay_backend.integratedProduct.dto.IntegratedProductResponse;
 import com.rebay.rebay_backend.integratedProduct.dto.ProductFeedItem;
 import com.rebay.rebay_backend.integratedProduct.entity.IntegratedProductView;
+import com.rebay.rebay_backend.integratedProduct.repository.IntegratedProductRepository;
 import com.rebay.rebay_backend.integratedProduct.service.IntegratedProductService;
 import com.rebay.rebay_backend.payment.entity.Transaction;
 import com.rebay.rebay_backend.payment.entity.TransactionStatus;
@@ -59,6 +60,7 @@ public class StatisticsService {
     private final CategoryRepository categoryRepository;
     private final TransactionRepository transactionRepository;
     private final AuctionRepository auctionRepository;
+    private final IntegratedProductRepository integratedProductRepository;
     private final AuctionService auctionService;
     private final UserService userService;
     private final AuthenticationService authenticationService;
@@ -69,7 +71,6 @@ public class StatisticsService {
 
         List<IntegratedProductView> viewList = likeRepository.findTopLikedProductsLastWeek(oneWeekAgo);
 
-        System.out.println(viewList);
         List<ProductFeedItem> userProducts = viewList.stream()
                 .sorted(Comparator.comparing(IntegratedProductView::getCreatedAt).reversed())
                 .map( view -> integratedProductService.mapViewToProductFeedItem(view))
@@ -83,7 +84,6 @@ public class StatisticsService {
         return searchRepository.findTop10PopularKeywordsInOneDay(oneDayAgo);
     }
 
-
     public BigDecimal getAverageEarningsPerUser() {
         List<Object[]> results = paymentRepository.findTotalSalesAndUniqueUserCount();
 
@@ -95,7 +95,6 @@ public class StatisticsService {
 
         BigDecimal totalSales;
         Object sumResult = result[0];
-        log.info("sumResult: ",sumResult);
 
         if (sumResult == null) {
             totalSales = BigDecimal.ZERO;
@@ -121,14 +120,9 @@ public class StatisticsService {
         User currentUser = authenticationService.getCurrentUser();
 
         List<Post> posts = postRepository.findRecommendationCandidates(currentUser.getId());
-        List<PostResponse> postCandidates = posts.stream().map(post -> PostResponse.fromEntity(post, userService.mapToUserResponse(post.getUser()))).collect(Collectors.toList());
-
         List<Auction> auctions = auctionRepository.findRecommendationCandidates(currentUser.getId());
-        List<AuctionResponse> auctionCandidates = auctions.stream().map(auction -> AuctionResponse.fromEntity(auction, userService.mapToUserResponse(auction.getSeller()))).collect(Collectors.toList());
 
-        List<IntegratedProductResponse> allIntegratedProducts = new ArrayList<>();
-        postCandidates.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
-        auctionCandidates.stream().map(IntegratedProductResponse::from).forEach(allIntegratedProducts::add);
+        List<IntegratedProductResponse> allIntegratedProducts = integratedProductRepository.fromDataToIntegratedProduct(posts, auctions);
 
         // 좋아요 기록이 5개 미만인 경우 주간 인기 상품 반환
         if (likeRepository.countByUserId(currentUser.getId()) < 5) {
@@ -181,7 +175,6 @@ public class StatisticsService {
                 aggregatedScores.merge(id, likeCount, Long::sum);
             }
         }
-        System.out.println(aggregatedScores);
         return aggregatedScores;
     }
 
@@ -194,7 +187,6 @@ public class StatisticsService {
             log.error("Category not found for ID: {}. Check if the category exists in the database.", identifier);
             return ancestors;
         }
-
 
         while (current != null) {
             try {
