@@ -223,15 +223,17 @@ public class PaymentService {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("거래를 찾을 수 없습니다: " + transactionId));
 
-        String orderId = null;
+        boolean isAuctionExpired =
+                transaction.getTransactionType() == TransactionType.AUCTION
+                        && transaction.getStatus() == TransactionStatus.EXPIRED;
 
-        if (transaction.getStatus() != TransactionStatus.PAYMENT_PENDING
-                && transaction.getStatus() != TransactionStatus.READY
-                && transaction.getStatus() != TransactionStatus.EXPIRED) {
-            Payment payment = paymentRepository.findByTransactionId(transactionId)
-                    .orElseThrow(() -> new IllegalArgumentException("해당 결제를 찾을 수 없습니다."));
-            orderId = payment.getOrderId();
+        if (isAuctionExpired) {
+            return toTransactionResponse(transaction, null);
         }
+
+        Payment payment = paymentRepository.findByTransactionId(transactionId).orElse(null);
+
+        String orderId = (payment != null ? payment.getOrderId() : null);
 
         return toTransactionResponse(transaction, orderId);
     }
