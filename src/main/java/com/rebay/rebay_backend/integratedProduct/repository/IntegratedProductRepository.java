@@ -12,6 +12,7 @@ import com.rebay.rebay_backend.auction.service.AuctionService;
 import com.rebay.rebay_backend.integratedProduct.dto.IntegratedProductResponse;
 import com.rebay.rebay_backend.integratedProduct.dto.ProductFeedItem;
 import com.rebay.rebay_backend.integratedProduct.dto.ProductType; // ProductType import 추가
+import com.rebay.rebay_backend.integratedProduct.entity.IntegratedProductView;
 import com.rebay.rebay_backend.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

@@ -121,4 +121,8 @@ public class ReviewService {
     public Long getReviewsCountByUser(Long userId) {
         return reviewRepository.countByTransactionSellerId(userId);
     }
+
+    public boolean existsReviewByTransactionId(Long transactionId) {
+        return reviewRepository.existsByTransactionId(transactionId);
+    }
 }
