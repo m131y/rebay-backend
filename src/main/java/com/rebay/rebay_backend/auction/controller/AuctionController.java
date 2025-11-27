@@ -1,8 +1,10 @@
 package com.rebay.rebay_backend.auction.controller;
 
+import com.rebay.rebay_backend.Post.dto.PostResponse;
 import com.rebay.rebay_backend.auction.dto.AuctionCloseResponse;
 import com.rebay.rebay_backend.auction.dto.AuctionRequest;
 import com.rebay.rebay_backend.auction.dto.AuctionResponse;
+import com.rebay.rebay_backend.auction.entity.Auction;
 import com.rebay.rebay_backend.auction.service.AuctionService;
 import com.rebay.rebay_backend.social.entity.Like;
 import com.rebay.rebay_backend.social.service.LikeService;
@@ -44,7 +46,10 @@ public class AuctionController {
 
     @GetMapping("/{auctionId}")
     public ResponseEntity<AuctionResponse> getAuction(@PathVariable Long auctionId) {
-        return ResponseEntity.ok(auctionService.getAuction(auctionId));
+        AuctionResponse response = auctionService.getAuction(auctionId);
+        response.setLikeCount(likeService.getAuctionLikeCount(auctionId));
+        response.setLiked(likeService.isLikedAuctionByCurrentUser(auctionId));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
