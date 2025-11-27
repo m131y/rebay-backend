@@ -49,7 +49,8 @@ public class LikeService {
 
     @Transactional(readOnly = true)
     public Long getLikeCount(Long postId) {
-        return likeRepository.countByPostId(postId);}
+        return likeRepository.countByPostId(postId);
+    }
 
     @Transactional(readOnly = true)
     public boolean isLikedByCurrentUser(Long postId) {
